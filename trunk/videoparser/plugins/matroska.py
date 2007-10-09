@@ -37,7 +37,7 @@ from __future__ import generators
 import struct
 
 # Project modules
-import parser
+import plugins
 import videofile
 import streams
 
@@ -114,11 +114,11 @@ class_ids = {
 
 
 
-class Parser(parser.BaseParser):
+class Parser(plugins.BaseParser):
     _endianess = streams.BIG_ENDIAN
     
     def __init__(self, *args, **kwargs):
-        parser.BaseParser.__init__(self, *args, **kwargs)
+        plugins.BaseParser.__init__(self, *args, **kwargs)
 
         
     def parse(self, filename, video):

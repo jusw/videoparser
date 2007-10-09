@@ -33,18 +33,17 @@
 import struct
 import cStringIO
 
-import parser
 
-import videofile
+import plugins
 import streams
 
 
 
-class Parser(parser.BaseParser):
+class Parser(plugins.BaseParser):
     _endianess = streams.LITTLE_ENDIAN
     
     def __init__(self):
-        parser.BaseParser.__init__(self)
+        plugins.BaseParser.__init__(self)
         
         self._parse_level = 0
         self._last_stream_header = None
