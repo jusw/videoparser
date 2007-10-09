@@ -34,12 +34,15 @@ import cStringIO
 # Using this object, 100 times parsing a file is 0.220 cpu seconds vs
 # using StringIO.StringIO's 0.340 cpu seconds.
 class StringStream(streams.binary.BinaryStream):
-    __slots__ = ['_data']
+    __slots__ = ['_data', '_length']
 
-    def __init__(self, data):
+    def __init__(self, data, endianess=0):
         streams.binary.BinaryStream.__init__(self)
         self._data = cStringIO.StringIO(data)
-    
+        self.set_endianess(endianess)
+        
+        self._length = len(data)
+        
     def read(self, length):
         return self._data.read(length)
 
@@ -52,5 +55,6 @@ class StringStream(streams.binary.BinaryStream):
     def close(self):
         return self._data.close()
 
-
+    def bytes_left(self):
+        return self._data.tell() < self._length
 

@@ -24,6 +24,8 @@
 
 
 # Only implement required information to retrieve video and audio information
+import os
+import stat
 
 import streams.binary
 
@@ -32,6 +34,8 @@ class FileStream(streams.binary.BinaryStream):
     def __init__(self, filename, endianess):
         streams.binary.BinaryStream.__init__(self)
         self._offset = 0
+        
+        self._filesize = os.stat(filename)[stat.ST_SIZE]
         self._fileobj = open(filename, 'rb')
         
         self.set_endianess(endianess)
@@ -57,6 +61,10 @@ class FileStream(streams.binary.BinaryStream):
     
     def tell(self):
         return self._fileobj.tell()
+
+
+    def bytes_left(self):
+        return self._fileobj.tell() < self._filesize
 
 
 

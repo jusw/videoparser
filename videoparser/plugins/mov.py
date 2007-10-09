@@ -28,9 +28,20 @@
     This is a really basic parser designed to get the required information fast
 
 """
+# For running single
+if __name__ == "__main__":
+    import sys
+    sys.path.append('..')
+
+import datetime
+
+import plugins
+import streams
+import time
 
 # Define the structure of the movie atom
 atom_structure = {
+    'ftyp':     ('Description', "validate_file_format"),
     'moov':     ('Movie atom', {
         'mvhd':     ('Movie header atom', "parse_movie_header_atom"),
         'trak':     ('Track atom', {
@@ -83,17 +94,13 @@ atom_structure = {
         'cmov':     ('Color table atom', None),
         'cmov':     ('Compressed movie atom', None),
         'rmra':     ('Reference movie atom', None),
-    })
+    }),
+    'free':     ('Description', None),
+    'wide':     ('Description', None),
+    'mdat':     ('Description', None),
 }
     
-# For running single
-if __name__ == "__main__":
-    import sys
-    sys.path.append('..')
 
-
-import plugins
-import streams
 
 
 class Parser(plugins.BaseParser):
@@ -107,26 +114,26 @@ class Parser(plugins.BaseParser):
         
         stream = streams.FileStream(filename, endianess=self._endianess)
 
+        # Make sure that we are dealing with a quicktime file format
+        if stream.read(12) != '\x00\x00\x00 ftypqt  ':
+            raise AssertionError("Invalid parser for this file")
+        stream.seek(0)
+        
+        # Build a tree with all information extracted
+        try:
+            data = self.parse_atom(stream, atom_tree=atom_structure)
+        except AssertionError:
+            return False
 
-        for i in range(4):
-            atom_size = stream.read_uint32()
-            atom_type = stream.read(4)
-            
-            type_data = atom_structure.get(atom_type)
-
-            if type(type_data) == tuple:
-                atom_data = stream.read_subsegment(atom_size - 8)
-                self.parse_atom(atom_data, atom_tree=type_data[1])
-            else:
-                stream.seek(stream.tell() + atom_size - 8)
-
+        # Extract required information from the tree and place it in the
+        # videofile object
+        self.extract_information(data, video)
+        
         return True
-    
     
     def parse_ftyp(self, data):
         print repr(data)
         
-    
     def parse_atom(self, data, atom_tree=None):
         self._parse_level += 1
         while data.bytes_left():
@@ -135,7 +142,6 @@ class Parser(plugins.BaseParser):
             atom_size = data.read_uint32()
             atom_type = data.read(4)
             atom_data = data.read_subsegment(atom_size - 8)
-
             #print "   " * (level + 1), "'%s':    ('DescriptionHere', {" % atom_type
             
             atom_tree_item = atom_tree.get(atom_type)
@@ -144,7 +150,6 @@ class Parser(plugins.BaseParser):
                 print "  " * (self._parse_level +1 ), "Uknown item!!!!"
                 continue
             
-            #print "  " * (self._parse_level +1 ),
             self.pprint("%s:" %atom_tree_item[0])
             
             if type(atom_tree_item[1]) == dict:
@@ -164,6 +169,19 @@ class Parser(plugins.BaseParser):
         
         pass
     
+    def validate_file_format(self, data):
+        major_brand = data.read(4)
+        minor_version = data.read(4)
+
+        if major_brand != 'qt  ':
+            raise AssertionError("Invalid parser for this file")
+        
+        while data.bytes_left():
+            compat_brand = data.read(4)
+            if compat_brand == 'qt  ':
+                return
+        
+        raise AssertionError("Invalid parser for this file")
     
     def pprint(self, *args, **kwargs):
         print "  " * (self._parse_level + 1),
@@ -180,10 +198,12 @@ class Parser(plugins.BaseParser):
 
         print "%-25s: %s" % (name, value)
         
+        
     def parse_movie_header_atom(self, data):
         self.iprint("Version", data.read_uint8())
-        self.iprint("Creation time", data.read_uint32())
-        self.iprint("Modification time", data.read_uint32())
+        self.iprint("Flags", repr(data.read(3)))
+        self.iprint("Creation time", data.read_timestamp_mac())
+        self.iprint("Modification time", data.read_timestamp_mac())
         self.iprint("Time scale", data.read_uint32())
         self.iprint("Duration", data.read_uint32())
         self.iprint("Preferred rate", data.read_uint32())
@@ -198,11 +218,12 @@ class Parser(plugins.BaseParser):
         self.iprint("Current time", data.read_uint32())
         self.iprint("Next track ID", data.read_uint32(), True)
 
+
     def parse_track_header_atom(self, data):
         self.iprint("Version", data.read_uint8())
         self.iprint("Flags", repr(data.read(3)))
-        self.iprint("Creation time", data.read_uint32())
-        self.iprint("Modification time", data.read_uint32())
+        self.iprint("Creation time", data.read_timestamp_mac())
+        self.iprint("Modification time", data.read_timestamp_mac())
         self.iprint("Track ID", data.read_uint32())
         self.iprint("Reserved", repr(data.read(4)))
         self.iprint("Duration", data.read_uint32())
@@ -212,8 +233,9 @@ class Parser(plugins.BaseParser):
         self.iprint("Volume", data.read_uint16())
         self.iprint("Reserved", repr(data.read(2)))
         self.iprint("Matrix structure ", repr(data.read(36))) 
-        self.iprint("Track width", data.read_uint32())
-        self.iprint("Track height", data.read_uint32(), True)
+        self.iprint("Track width", data.read_qtfloat_32())
+        self.iprint("Track height", data.read_qtfloat_32(), True)
+        
         
     def parse_handler_reference_atom(self, data):
         self.iprint("Version", data.read_uint8())
@@ -224,6 +246,7 @@ class Parser(plugins.BaseParser):
         self.iprint("Component flags", data.read_uint32())
         self.iprint("Component flags mask", data.read_uint32())
         self.iprint("Component name", data.read(data._length - data.tell()), True)
+        
         
 if __name__ == "__main__":
     import sys

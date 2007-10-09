@@ -203,10 +203,7 @@ class Parser(plugins.BaseParser):
         fileprop = self.FileProperties()
         fileprop.id = data.read_guid()
         fileprop.size = data.read_uint64()
-        fileprop.create_date = datetime.datetime(1601, 1, 1, 0, 0, 0) + \
-                                datetime.timedelta(
-                                    microseconds=data.read_uint64()/10
-                                )
+        fileprop.create_date = data.read_timestamp_win()
         fileprop.packet_count = data.read_uint64()
         fileprop.play_duration = datetime.timedelta(
                                     microseconds=data.read_uint64()/10)
