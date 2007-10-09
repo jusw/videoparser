@@ -28,17 +28,16 @@
     This is a really basic parser designed to get the required information fast
 """
 
-# Only implement required information to retrieve video and audio information
 
-import struct
-import cStringIO
+# Built-in modules
 import datetime
 
-import parser
-
-import videofile
+# Project modules
+import plugins
 import streams
 
+
+# Only implement required information to retrieve video and audio information
 guid_list = {
     'D2D0A440-E307-11D2-97F0-00A0C95EA850': 'ASF_Extended_Content_Description_Object',
     '75B22630-668E-11CF-A6D9-00AA0062CE6C': 'ASF_Header_Object',
@@ -64,11 +63,11 @@ guid_list = {
 
 
 
-class Parser(parser.BaseParser):
+class Parser(plugins.BaseParser):
     _endianess = streams.LITTLE_ENDIAN
     
     def __init__(self):
-        parser.BaseParser.__init__(self)
+        plugins.BaseParser.__init__(self)
         
     def parse(self, filename, video):
         
