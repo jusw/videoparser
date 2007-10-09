@@ -39,7 +39,7 @@ import struct
 # Project modules
 import parser
 import videofile
-
+import streams
 
 class Types:
     string          = 1
@@ -115,7 +115,7 @@ class_ids = {
 
 
 class Parser(parser.BaseParser):
-    _endianess = parser.BIG_ENDIAN
+    _endianess = streams.BIG_ENDIAN
     
     def __init__(self, *args, **kwargs):
         parser.BaseParser.__init__(self, *args, **kwargs)
@@ -124,7 +124,7 @@ class Parser(parser.BaseParser):
     def parse(self, filename, video):
         in_tracks_element = False
         
-        stream = parser.File(filename, endianess=self._endianess)
+        stream = streams.FileStream(filename, endianess=self._endianess)
 
         # Check if this is an EBML file
         if stream.read_uint32() != 0x1a45dfa3:

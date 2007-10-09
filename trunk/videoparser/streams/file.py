@@ -23,8 +23,40 @@
 #
 
 
-class BaseParser(object):
-    pass
+# Only implement required information to retrieve video and audio information
+
+import streams.binary
+
+class FileStream(streams.binary.BinaryStream):
+    
+    def __init__(self, filename, endianess):
+        streams.binary.BinaryStream.__init__(self)
+        self._offset = 0
+        self._fileobj = open(filename, 'rb')
+        
+        self.set_endianess(endianess)
+
+    def __del__(self):
+        self._fileobj.close()
+        
+    # Override
+    def validate(self):
+        return False
+
+    def read(self, bytes):
+        self._offset += bytes
+        return self._fileobj.read(bytes)
+    
+    def seek(self, offset):
+        self._offset = offset
+        self._fileobj.seek(offset)
+    
+    def skip(self, bytes):
+        self.seek(self._offset + bytes)
+
+    
+    def tell(self):
+        return self._fileobj.tell()
 
 
 

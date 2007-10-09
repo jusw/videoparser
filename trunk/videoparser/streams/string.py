@@ -23,9 +23,34 @@
 #
 
 
-class BaseParser(object):
-    pass
+# Only implement required information to retrieve video and audio information
 
+import streams.binary
+import cStringIO
+
+
+
+# cStringIO is faster but can't be subclassed, but it performs 33% faster:
+# Using this object, 100 times parsing a file is 0.220 cpu seconds vs
+# using StringIO.StringIO's 0.340 cpu seconds.
+class StringStream(streams.binary.BinaryStream):
+    __slots__ = ['_data']
+
+    def __init__(self, data):
+        streams.binary.BinaryStream.__init__(self)
+        self._data = cStringIO.StringIO(data)
+    
+    def read(self, length):
+        return self._data.read(length)
+
+    def tell(self):
+        return self._data.tell()
+    
+    def seek(self, position):
+        return self._data.seek(position)
+    
+    def close(self):
+        return self._data.close()
 
 
 
