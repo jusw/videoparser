@@ -1,3 +1,6 @@
+""" Class to read binary information using various predefined types. """
+
+
 #
 #  Copyright (c) 2007 Michael van Tellingen <michaelvantellingen@gmail.com>
 #  All rights reserved.
@@ -25,6 +28,9 @@
 
 # Only implement required information to retrieve video and audio information
 
+
+import datetime
+
 import struct
 import cStringIO
 import streams
@@ -45,37 +51,56 @@ class BinaryStream(object):
     def set_endianess(self, endianess):
         self._endianess = endianess
     
+    def get_endianess(self):
+        return self._endianess
+    
     def unpack(self, type, length):
+        """ Shorthand for unpack which uses the endianess defined with
+            set_endianess(), used internally."""
         if self._endianess == streams.BIG_ENDIAN:
             return struct.unpack('>' + type, self.read(length))[0]
         else:
             return struct.unpack('<' + type, self.read(length))[0]
 
     def read_float(self):
+        """ Read a 32bit float."""
         return self.unpack('f', 4)
 
+    def read_qtfloat_32(self):
+        """ Read a 32bits quicktime float."""
+        # This comes from hachoir
+        return self.read_int16() + float(self.read_uint16()) /65535
+    
     def read_uint64(self):
+        """ Read an unsigned 64bit integer."""
         return self.unpack('Q', 8)
 
     def read_int64(self):
+        """ Read an signed 64bit integer."""
         return self.unpack('q', 4)
         
     def read_uint32(self):
+        """ Read an unsigned 32bit integer."""
         return self.unpack('I', 4)
 
     def read_int32(self):
+        """ Read an signed 32bit integer."""
         return self.unpack('i', 4)
 
     def read_uint16(self):
+        """ Read an unsigned 16bit integer."""
         return self.unpack('H', 2)
 
     def read_int16(self):
+        """ Read an signed 16bit integer."""
         return self.unpack('h', 2)
     
     def read_uint8(self):
+        """ Read an unsigned 8bit integer."""
         return ord(self.read(1))
     
     def read_int8(self):
+        """ Read a signed 8bit integer."""
         return struct.unpack('b', self.read(1))[0]
     
     def read_dword(self):
@@ -89,7 +114,23 @@ class BinaryStream(object):
     
     def read_byte(self):
         return self.read(1)
+
+
+
+    
+    def read_timestamp_mac(self):
+        """ Read a timestamp in mac format (seconds sinds 1904) """
+        timestamp_base = datetime.datetime(1904, 1, 1, 0, 0)
+        timestamp_value = datetime.timedelta(seconds=self.read_uint32())
+        return timestamp_base + timestamp_value
+
+    def read_timestamp_win(self):
+        timestamp_base = datetime.datetime(1601, 1, 1, 0, 0, 0)
+        timestamp_value = datetime.timedelta(
+            microseconds=data.read_uint64()/10)
         
+        return timestamp_base + timestamp_value
+    
     # TODO: FIXME
     def read_wchars(self, len, null_terminated=False):
         data = self.read(len * 2)
@@ -103,7 +144,7 @@ class BinaryStream(object):
             return unicode(data, "UTF-16-LE")
     
     def read_subsegment(self, length):
-        return streams.StringStream(self.read(length))
+        return streams.StringStream(self.read(length), self._endianess)
     
     
     def convert_uintvar(self, data, endianess=None):
