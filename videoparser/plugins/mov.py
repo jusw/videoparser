@@ -32,57 +32,57 @@
 # Define the structure of the movie atom
 atom_structure = {
     'moov':     ('Movie atom', {
-        'mvhd':     ('Movie header atom'),
+        'mvhd':     ('Movie header atom', "parse_movie_header_atom"),
         'trak':     ('Track atom', {
-            'tkhd':      ('Track header atom'),
+            'tkhd':      ('Track header atom', "parse_track_header_atom"),
             'clip':      ('Track clipping atom', {
-                'crgn':     ('Clipping region atom'),
+                'crgn':     ('Clipping region atom', None),
             }),
             'matt':      ('Track matte atom', {
-                'kmat':     ('Compressed matte atomm'),
+                'kmat':     ('Compressed matte atomm', None),
             }),
             'edts':      ('Edit atom', {
-                'elst':     ('Edit list atom'),
+                'elst':     ('Edit list atom', None),
             }),
             'tref':      ('DescriptionHere', {
-                'tmcd':       ('DescriptionHere')
+                'tmcd':       ('DescriptionHere', None)
             }),
             'mdia':      ('Media atom', {
-                'mdhd':       ('Media header atom'),
-                'hdlr':       ('Media handler reference atom'),
+                'mdhd':       ('Media header atom', None),
+                'hdlr':       ('Media handler reference atom', "parse_handler_reference_atom"),
                 'minf':       ('Video media information atom', {
-                    'smhd':    ('DescriptionHere'),
-                    'gmhd':    ('DescriptionHere'),
-                    'vmhd':        ('Video media information header atom'),
-                    'hdlr':        ('Data handler reference atom'),
+                    'smhd':    ('DescriptionHere', None),
+                    'gmhd':    ('DescriptionHere', None),
+                    'vmhd':        ('Video media information header atom', None),
+                    'hdlr':        ('Data handler reference atom', None),
                     'dinf':        ('Data information atom', {
-                        'dref':         ('Data reference atom')
+                        'dref':         ('Data reference atom', None)
                     }),
                     'stbl':        ('Sample table atom', {
-                        'stsd':         ('Sample description atom'),
-                        'stts':         ('Time-to-sample atom'),
-                        'stsc':         ('Sample-to-chunk atom'),
-                        'stsz':         ('Sample size atom'),
-                        'stco':         ('Chunk offset atom'),
+                        'stsd':         ('Sample description atom', None),
+                        'stts':         ('Time-to-sample atom', None),
+                        'stsc':         ('Sample-to-chunk atom', None),
+                        'stsz':         ('Sample size atom', None),
+                        'stco':         ('Chunk offset atom', None),
                     }),
                 }),
             }),
-            'udta':    ('DescriptionHere'),
+            'udta':    ('DescriptionHere', None),
             'meta':    ('DescriptionHere', {
-                'hdlr':    ('DescriptionHere'),
-                'keys':    ('DescriptionHere'),
-                'ilst':    ('DescriptionHere'),
+                'hdlr':    ('DescriptionHere', None),
+                'keys':    ('DescriptionHere', None),
+                'ilst':    ('DescriptionHere', None),
             }),
         }),
-        'udta':    ('User data atom'),
+        'udta':    ('User data atom', None),
         'meta':    ('Metadata atom (Guess?)', {
-            'hdlr':    ('Undocumented (HDLR)'),
-            'keys':    ('Undocumented (KEYS)'),
-            'ilst':    ('Undocumented (ILST)'),
+            'hdlr':    ('Undocumented (HDLR)', None),
+            'keys':    ('Undocumented (KEYS)', None),
+            'ilst':    ('Undocumented (ILST)', None),
         }),
-        'cmov':     ('Color table atom'),
-        'cmov':     ('Compressed movie atom'),
-        'rmra':     ('Reference movie atom'),
+        'cmov':     ('Color table atom', None),
+        'cmov':     ('Compressed movie atom', None),
+        'rmra':     ('Reference movie atom', None),
     })
 }
     
@@ -144,24 +144,86 @@ class Parser(plugins.BaseParser):
                 print "  " * (self._parse_level +1 ), "Uknown item!!!!"
                 continue
             
-            if type(atom_tree_item) == tuple:
-                print "  " * (self._parse_level +1 ), atom_tree_item[0]
-            else:
-                print "  " * (self._parse_level +1 ), atom_tree_item
+            #print "  " * (self._parse_level +1 ),
+            self.pprint("%s:" %atom_tree_item[0])
             
-            if type(atom_tree_item) == tuple:
+            if type(atom_tree_item[1]) == dict:
                 self.parse_atom(atom_data, atom_tree=atom_tree_item[1])
-            else:
-                pass
+
+            elif atom_tree_item[1]:
+                # Is this the python way?
+                # Call the method defined in the parse tree
+                self._parse_level += 1
+                self.__class__.__getattribute__(self, atom_tree_item[1])(atom_data)
+                self._parse_level -= 1
+            
+                
         self._parse_level -= 1
         
     def extract_information(self, header, video):
         
         pass
-        
-    def parse_movie_header_data(self, data):
-        pass
     
+    
+    def pprint(self, *args, **kwargs):
+        print "  " * (self._parse_level + 1),
+        for arg in args:
+            print arg,
+        print
+        
+    def iprint(self, name, value, last=False):
+        print "  " * (self._parse_level),
+        if last:
+            print " -",
+        else:
+            print " |",
+
+        print "%-25s: %s" % (name, value)
+        
+    def parse_movie_header_atom(self, data):
+        self.iprint("Version", data.read_uint8())
+        self.iprint("Creation time", data.read_uint32())
+        self.iprint("Modification time", data.read_uint32())
+        self.iprint("Time scale", data.read_uint32())
+        self.iprint("Duration", data.read_uint32())
+        self.iprint("Preferred rate", data.read_uint32())
+        self.iprint("Preferred volume", data.read_uint16())
+        self.iprint("Reserved", repr(data.read(10)))
+        self.iprint("Matrix structure ", repr(data.read(36))) 
+        self.iprint("Preview time", data.read_uint32())
+        self.iprint("Preview duration", data.read_uint32())
+        self.iprint("Poster time", data.read_uint32())
+        self.iprint("Selection time", data.read_uint32())
+        self.iprint("Selection duration", data.read_uint32())
+        self.iprint("Current time", data.read_uint32())
+        self.iprint("Next track ID", data.read_uint32(), True)
+
+    def parse_track_header_atom(self, data):
+        self.iprint("Version", data.read_uint8())
+        self.iprint("Flags", repr(data.read(3)))
+        self.iprint("Creation time", data.read_uint32())
+        self.iprint("Modification time", data.read_uint32())
+        self.iprint("Track ID", data.read_uint32())
+        self.iprint("Reserved", repr(data.read(4)))
+        self.iprint("Duration", data.read_uint32())
+        self.iprint("Reserved", repr(data.read(8)))
+        self.iprint("Layer", data.read_uint16())
+        self.iprint("Alternate group", data.read_uint16())
+        self.iprint("Volume", data.read_uint16())
+        self.iprint("Reserved", repr(data.read(2)))
+        self.iprint("Matrix structure ", repr(data.read(36))) 
+        self.iprint("Track width", data.read_uint32())
+        self.iprint("Track height", data.read_uint32(), True)
+        
+    def parse_handler_reference_atom(self, data):
+        self.iprint("Version", data.read_uint8())
+        self.iprint("Flags", repr(data.read(3)))
+        self.iprint("Component type", data.read(4))
+        self.iprint("Component subtype", data.read(4))
+        self.iprint("Component manufacturer", data.read_uint32())
+        self.iprint("Component flags", data.read_uint32())
+        self.iprint("Component flags mask", data.read_uint32())
+        self.iprint("Component name", data.read(data._length - data.tell()), True)
         
 if __name__ == "__main__":
     import sys
