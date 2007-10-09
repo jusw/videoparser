@@ -22,9 +22,14 @@
 #  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Python built-in modules
 import sys
 
+# Project modules
 import videofile
+
+
+__all__ = ['VideoParser']
 
 
 parser_modules = ['asf', 'matroska', 'avi']
@@ -39,7 +44,6 @@ class VideoParser(object):
         
         # Import the parsers
         for module_filename in parser_modules:
-            
             try:
                 module = __import__("plugins." + module_filename, None, None,
                                     "plugins")
@@ -74,7 +78,7 @@ class VideoParser(object):
                 continue
 
 
-
-video_parser = VideoParser()
-for filename in sys.argv[1:]:
-    video_parser.parse_file(filename)
+if __name__ == "__main__":
+    video_parser = VideoParser()
+    for filename in sys.argv[1:]:
+        video_parser.parse_file(filename)

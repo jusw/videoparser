@@ -36,12 +36,12 @@ import cStringIO
 import parser
 
 import videofile
-
+import streams
 
 
 
 class Parser(parser.BaseParser):
-    _endianess = parser.LITTLE_ENDIAN
+    _endianess = streams.LITTLE_ENDIAN
     
     def __init__(self):
         parser.BaseParser.__init__(self)
@@ -51,7 +51,7 @@ class Parser(parser.BaseParser):
 
     def parse(self, filename, video):
         
-        stream = parser.File(filename, endianess=self._endianess)
+        stream = streams.FileStream(filename, endianess=self._endianess)
 
         # Read fourcc
         if stream.read(4) != 'RIFF':

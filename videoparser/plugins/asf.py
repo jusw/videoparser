@@ -37,7 +37,7 @@ import datetime
 import parser
 
 import videofile
-
+import streams
 
 guid_list = {
     'D2D0A440-E307-11D2-97F0-00A0C95EA850': 'ASF_Extended_Content_Description_Object',
@@ -65,14 +65,14 @@ guid_list = {
 
 
 class Parser(parser.BaseParser):
-    _endianess = parser.LITTLE_ENDIAN
+    _endianess = streams.LITTLE_ENDIAN
     
     def __init__(self):
         parser.BaseParser.__init__(self)
         
     def parse(self, filename, video):
         
-        stream = parser.File(filename, endianess=self._endianess)
+        stream = streams.FileStream(filename, endianess=self._endianess)
             
         object_id   = stream.read_guid()
         
