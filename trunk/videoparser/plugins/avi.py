@@ -34,13 +34,14 @@ import struct
 import cStringIO
 
 
-import plugins
-import streams
+import videoparser.plugins as plugins
+import videoparser.streams as streams
 
 
 
 class Parser(plugins.BaseParser):
-    _endianess = streams.LITTLE_ENDIAN
+    _endianess = streams.endian.little
+    _file_types = ['avi']
     
     def __init__(self):
         plugins.BaseParser.__init__(self)
@@ -50,7 +51,8 @@ class Parser(plugins.BaseParser):
 
     def parse(self, filename, video):
         
-        stream = streams.FileStream(filename, endianess=self._endianess)
+        stream = streams.factory.create_filestream(filename,
+                                                   endianess=self._endianess)
 
         # Read fourcc
         if stream.read(4) != 'RIFF':

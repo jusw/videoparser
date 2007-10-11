@@ -33,21 +33,36 @@ import datetime
 
 import struct
 import cStringIO
-import streams
 
 
-    
-    
+from videoparser.streams import endian
+
+
 class BinaryStream(object):
-    __slots__ = ['_endianess']
     
-    def __init__(self, endianess=streams.LITTLE_ENDIAN):
+    def __init__(self, fileobj, filesize, endianess=endian.little):
         self._endianess = endianess
+        self._fileobj = fileobj
+        self._filesize = filesize
         
+    def __del__(self):
+        self.close()
         
-    def read(self):
-        raise NotImplementedError()
+    def read(self, length):
+        return self._fileobj.read(length)
+
+    def tell(self):
+        return self._fileobj.tell()
     
+    def seek(self, position):
+        return self._fileobj.seek(position)
+    
+    def close(self):
+        return self._fileobj.close()
+
+    def bytes_left(self):
+        return self._fileobj.tell() < self._filesize
+
     def set_endianess(self, endianess):
         self._endianess = endianess
     
@@ -57,7 +72,7 @@ class BinaryStream(object):
     def unpack(self, type, length):
         """ Shorthand for unpack which uses the endianess defined with
             set_endianess(), used internally."""
-        if self._endianess == streams.BIG_ENDIAN:
+        if self._endianess == endian.big:
             return struct.unpack('>' + type, self.read(length))[0]
         else:
             return struct.unpack('<' + type, self.read(length))[0]
@@ -138,14 +153,15 @@ class BinaryStream(object):
         # String is null terminated, remove the null char
         if null_terminated:
             data = data[:-2]
-        if self._endianess == streams.BIG_ENDIAN:
+        if self._endianess == endian.big:
             return unicode(data, "UTF-16-BE")
         else:
             return unicode(data, "UTF-16-LE")
     
     def read_subsegment(self, length):
-        return streams.StringStream(self.read(length), self._endianess)
-    
+        data = self.read(length)
+        return BinaryStream(cStringIO.StringIO(data), len(data),
+                            self._endianess)
     
     def convert_uintvar(self, data, endianess=None):
         """ Convert a string of variable length to an integer """
@@ -156,7 +172,7 @@ class BinaryStream(object):
         if endianess is None:
             endianess = self._endianess
             
-        if endianess == streams.BIG_ENDIAN:
+        if endianess == endian.big:
             data = data[::-1]
             
         mask = 0
@@ -194,9 +210,9 @@ class BinaryStream(object):
         
         #print "uuid version = %d - %X" % (version, time_low)
         if version == 1:
-            node = self.convert_uintvar(node, streams.BIG_ENDIAN)
+            node = self.convert_uintvar(node, endian.big)
         else:
-            node = self.convert_uintvar(node, streams.BIG_ENDIAN)
+            node = self.convert_uintvar(node, endian.big)
         
         return "%08X-%04X-%04X-%X%X-%012X" % (time_low,
                                             time_mid,

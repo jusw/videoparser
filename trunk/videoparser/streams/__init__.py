@@ -1,9 +1,8 @@
 
 
 
-LITTLE_ENDIAN = 0
-BIG_ENDIAN    = 1
+from videoparser.streams.binary import BinaryStream
+from videoparser.streams import factory
+from videoparser.streams import endian
 
-import binary
-from file import FileStream
-from string import StringStream
+

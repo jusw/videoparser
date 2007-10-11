@@ -37,9 +37,8 @@ from __future__ import generators
 import struct
 
 # Project modules
-import plugins
-import videofile
-import streams
+import videoparser.plugins as plugins
+import videoparser.streams as streams
 
 class Types:
     string          = 1
@@ -115,7 +114,8 @@ class_ids = {
 
 
 class Parser(plugins.BaseParser):
-    _endianess = streams.BIG_ENDIAN
+    _endianess = streams.endian.big
+    _file_types = ['mkv']
     
     def __init__(self, *args, **kwargs):
         plugins.BaseParser.__init__(self, *args, **kwargs)
@@ -124,7 +124,8 @@ class Parser(plugins.BaseParser):
     def parse(self, filename, video):
         in_tracks_element = False
         
-        stream = streams.FileStream(filename, endianess=self._endianess)
+        stream = streams.factory.create_filestream(filename,
+                                                   endianess=self._endianess)
 
         # Check if this is an EBML file
         if stream.read_uint32() != 0x1a45dfa3:
