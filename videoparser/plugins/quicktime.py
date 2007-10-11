@@ -105,6 +105,7 @@ atom_structure = {
 
 class Parser(plugins.BaseParser):
     _endianess = streams.BIG_ENDIAN
+    _file_types = ['mov']
     
     def __init__(self):
         plugins.BaseParser.__init__(self)
@@ -116,7 +117,7 @@ class Parser(plugins.BaseParser):
 
         # Make sure that we are dealing with a quicktime file format
         if stream.read(12) != '\x00\x00\x00 ftypqt  ':
-            raise AssertionError("Invalid parser for this file")
+            return False
         stream.seek(0)
         
         # Build a tree with all information extracted
@@ -255,8 +256,10 @@ if __name__ == "__main__":
     import plugins
     video = videofile.VideoFile()
     p = Parser()
-    p.parse(sys.argv[1], video)
-
+    if not p.parse(sys.argv[1], video):
+        print "This is not a quicktime file.."
+        sys.exit(1)
+        
     print video
     
 

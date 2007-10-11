@@ -24,10 +24,11 @@
 
 # Python built-in modules
 import sys
+import os
 
 # Project modules
 import videofile
-
+import streams
 
 __all__ = ['VideoParser']
 
@@ -45,9 +46,10 @@ class VideoParser(object):
         # Import the parsers
         for module_filename in parser_modules:
             try:
-                module = __import__("plugins." + module_filename, None, None,
+                module = __import__("videoparser.plugins." + module_filename, None, None,
                                     "plugins")
             except ImportError, err:
+                raise
                 print "Unable to open parser module '%s'" % module_filename 
                 continue
         
@@ -64,21 +66,43 @@ class VideoParser(object):
     def parse_file(self, filename):
         video = videofile.VideoFile()
         
-        # Parse the file
+
+        filetype = filename[filename.rindex(os.extsep)+1:]
+        
+        # Guess on the extension which parser to use
+        for parser in self.parsers:
+            if filetype in parser._file_types:
+                break
+            parser = None
+        
+        guessed_parser = parser
+        if guessed_parser and self.parse_file_with(filename, parser, video):
+            return video
+        
+        # Try all parsers then
         for parser in self.parsers:
             
-            # Check if this is the right parser for the file
-            try:
-                print "Trying to parse %s with %s" % (filename, parser)
-                if parser.parse(filename, video):
-                    print video
-                    #print "OK"
-                    break
-            except AssertionError:
+            # Don't parse the file twice with the same parser
+            if parser == guessed_parser:
                 continue
+            
+            if self.parse_file_with(filename, parser, video):
+                return video
+    
+        return None
+    
+    def parse_file_with(self, filename, parser, video):
+        # Check if this is the right parser for the file
+        try:
+            print "Trying to parse %s with %s" % (filename, parser)
+            if parser.parse(filename, video):
+                return True
+
+        except AssertionError:
+            return False
 
 
 if __name__ == "__main__":
     video_parser = VideoParser()
     for filename in sys.argv[1:]:
-        video_parser.parse_file(filename)
+        print repr(video_parser.parse_file(filename))

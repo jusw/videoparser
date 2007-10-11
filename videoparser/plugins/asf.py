@@ -33,8 +33,8 @@
 import datetime
 
 # Project modules
-import plugins
-import streams
+import videoparser.plugins as plugins
+import videoparser.streams as streams
 
 
 # Only implement required information to retrieve video and audio information
@@ -64,14 +64,16 @@ guid_list = {
 
 
 class Parser(plugins.BaseParser):
-    _endianess = streams.LITTLE_ENDIAN
+    _endianess = streams.endian.little
+    _file_types = ['wmv']
     
     def __init__(self):
         plugins.BaseParser.__init__(self)
         
     def parse(self, filename, video):
         
-        stream = streams.FileStream(filename, endianess=self._endianess)
+        stream = streams.factory.create_filestream(filename,
+                                                   endianess=self._endianess)
             
         object_id   = stream.read_guid()
         
