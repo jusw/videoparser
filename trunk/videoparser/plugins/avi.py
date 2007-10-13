@@ -62,6 +62,7 @@ class Parser(plugins.BaseParser):
         filetype = stream.read(4)
         
         # Parse the first block (which is a header)
+        
         header = self.parse_block(stream)
         self.extract_information(header, video)
         
@@ -123,30 +124,31 @@ class Parser(plugins.BaseParser):
         return item
 
     def parse_chunk(self, stream, chunk_id):
+        
         chunk_size = stream.read_uint32()
         chunk_size += chunk_size % 2 # Align to dword
-
+        
         if chunk_id in ['avih', 'strh', 'strf']:
+            data = stream.read_subsegment(chunk_size)
             if chunk_id == 'avih':
-                data = stream.read_subsegment(chunk_size)
                 return self.parse_mainheader(data)
             
             elif chunk_id == 'strh':
-                data = stream.read_subsegment(chunk_size)
                 return self.parse_streamheader(data)
                 
             elif chunk_id == 'strf':
                 if self._last_stream_header.type == 'vids':
-                    return stream.read_bitmapinfoheader()
+                    return data.read_bitmapinfoheader()
 
                 elif self._last_stream_header.type == 'auds':
-                    return stream.read_waveformatex()
+                    return data.read_waveformatex()
 
                 else:
                     assert("invalid stream type")
         else:
             stream.seek(stream.tell() + chunk_size)
-
+        
+        return None
 
     def parse_streamheader(self, data):
         header = self.AVIStreamHeader()
