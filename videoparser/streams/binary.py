@@ -72,11 +72,20 @@ class BinaryStream(object):
     def unpack(self, type, length):
         """ Shorthand for unpack which uses the endianess defined with
             set_endianess(), used internally."""
-        if self._endianess == endian.big:
-            return struct.unpack('>' + type, self.read(length))[0]
-        else:
-            return struct.unpack('<' + type, self.read(length))[0]
-
+        data = self.read(length)
+        
+        assert len(data) == length, "Unexpected end of stream"
+        
+        try:
+            if self._endianess == endian.big:
+                return struct.unpack('>' + type, data)[0]
+            else:
+                return struct.unpack('<' + type, data)[0]
+        except struct.error:
+            print len(data)
+            print "Unable to unpack '%r'" % data
+            raise
+        
     def read_float(self):
         """ Read a 32bit float."""
         return self.unpack('f', 4)
@@ -249,7 +258,6 @@ class BinaryStream(object):
     
     
     def read_waveformatex(self):
-        
         obj = self.WAVEFORMATEX()
         
         obj.codec_id = self.read_uint16()
@@ -260,7 +268,6 @@ class BinaryStream(object):
         obj.bits_per_sample = self.read_uint16()
         obj.codec_size = self.read_uint16()
         obj.codec_data = self.read_subsegment(obj.codec_size)
-        
         return obj
 
 

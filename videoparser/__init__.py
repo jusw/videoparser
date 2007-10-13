@@ -79,6 +79,10 @@ class VideoParser(object):
         if guessed_parser and self.parse_file_with(filename, parser, video):
             return video
         
+        
+        # Don't try other parsers
+        return None
+    
         # Try all parsers then
         for parser in self.parsers:
             
@@ -92,15 +96,23 @@ class VideoParser(object):
         return None
     
     def parse_file_with(self, filename, parser, video):
+        
+            
         # Check if this is the right parser for the file
         try:
-            print "Trying to parse %s with %s" % (filename, parser)
+            #print "Trying to parse %s with %s" % (filename, parser)
             if parser.parse(filename, video):
                 return True
 
         except AssertionError:
+            raise
             return False
-
+        except IOError:
+            print "IOError on file '%s'"  % filename
+            return False
+        except:
+            print "Error parsing '%s'" % filename
+            raise
 
 if __name__ == "__main__":
     video_parser = VideoParser()

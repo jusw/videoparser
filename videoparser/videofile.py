@@ -60,7 +60,17 @@ class VideoFile(object):
                                        )
         
         return buf
-        
+    
+    
+    def get_video_streams(self):
+        for stream_id in self._streams:
+            if isinstance(self._streams[stream_id], VideoStream):
+                yield self._streams[stream_id]
+
+    def get_audio_streams(self):
+        for stream_id in self._streams:
+            if isinstance(self._streams[stream_id], AudioStream):
+                yield self._streams[stream_id]
 
 class VideoStream(object):
     def __init__(self):
@@ -99,6 +109,19 @@ class VideoStream(object):
         return "codec: %s, length: %s, resolution: %dx%d, fps: %s" % (
             self._codec, self._duration / 60.0, self._width, self._height, self._framerate)
 
+    def get_resolution(self):
+        return (self._width, self._height)
+    resolution = property(fget=get_resolution)
+    
+    def get_codec(self):
+        return self._codec
+    codec = property(fget=get_codec)
+    
+    def get_duration(self):
+        return self._duration / 60.0
+    duration = property(fget=get_duration)
+        
+    
 class AudioStream(object):
     def __init__(self):
         self._channels = 0
