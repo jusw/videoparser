@@ -23,19 +23,10 @@
 #
 
 """
-    EBML / Matroska parser
+    EBML / Matroska header parser
     
     See http://www.matroska.org/technical/specs/index.html
-    
-    This is a really basic parser designed to get the required information fast
 """
-
-# Future imports
-from __future__ import generators
-
-# Python built-in modules
-import struct
-
 
 # For testing
 if __name__ == "__main__":
@@ -44,6 +35,8 @@ if __name__ == "__main__":
 # Project modules
 import videoparser.plugins as plugins
 import videoparser.streams as streams
+
+__all__ = ['Parser']
 
 class Types:
     string          = 1
@@ -71,8 +64,8 @@ class_ids = {
     
     # The main elements (level 0)
     0x18538067:     ('Segment',     types.sub_elements, 0), # Segment
-    0x114D9B74:     ('SeekHead',    types.sub_elements, 1), # Meta Seek Information
-    0x1549a966:     ('Info',        types.sub_elements, 1), # Segment Information
+    0x114D9B74:     ('SeekHead',    types.sub_elements, 1), # Meta Seek Info
+    0x1549a966:     ('Info',        types.sub_elements, 1), # Segment Info
     0x1F43B675:     ('Cluster',     types.sub_elements, 1), # Cluster
     0x1c53bb6b:     ('Cues',        types.sub_elements, 1),    
         
@@ -222,7 +215,8 @@ class Parser(plugins.BaseParser):
     
     def parse_header(self, stream):
         
-        # Elements incorporate an Element ID, a descriptor for the size of the element, and the binary data itself.
+        # Elements incorporate an Element ID, a descriptor for the size of the
+        # element, and the binary data itself.
         
         while stream.bytes_left():
             # Fetch the element id
@@ -232,7 +226,8 @@ class Parser(plugins.BaseParser):
             
             # Read all the bytes from the complete class-id:
             if classid_size > 1:
-                class_id = stream.convert_uintvar(octet + stream.read(classid_size-1))
+                class_id = stream.convert_uintvar(octet +
+                                                  stream.read(classid_size-1))
             else:
                 class_id = ord(octet)
             
@@ -335,7 +330,6 @@ class Parser(plugins.BaseParser):
 if __name__ == "__main__":
     import sys
     import videofile
-    
 
     video = videofile.VideoFile()
 
