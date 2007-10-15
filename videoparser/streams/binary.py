@@ -1,6 +1,5 @@
 """ Class to read binary information using various predefined types. """
 
-
 #
 #  Copyright (c) 2007 Michael van Tellingen <michaelvantellingen@gmail.com>
 #  All rights reserved.
@@ -49,6 +48,9 @@ class BinaryStream(object):
         self.close()
         
     def read(self, length):
+        if not length:
+            return ''
+        
         return self._fileobj.read(length)
 
     def tell(self):
@@ -139,8 +141,9 @@ class BinaryStream(object):
     def read_byte(self):
         return self.read(1)
 
-
-
+    def read_fourcc(self):
+        return self.read(4)
+    
     
     def read_timestamp_mac(self):
         """ Read a timestamp in mac format (seconds sinds 1904) """
@@ -230,8 +233,57 @@ class BinaryStream(object):
                                             clock_seq_low,
                                             node)
                                      
+    def read_waveformatex(self):
+        obj = self.WAVEFORMATEX()
+        
+        obj.codec_id = self.read_uint16()
+        obj.channels = self.read_uint16()
+        obj.sample_rate = self.read_uint32()
+        obj.bit_rate = self.read_uint32()
+        obj.block_alignment = self.read_uint16()
+        obj.bits_per_sample = self.read_uint16()
+        obj.codec_size = self.read_uint16()
+        obj.codec_data = self.read_subsegment(obj.codec_size)
+        return obj
+    
+    def read_bitmapinfoheader(self):
+        obj = self.BITMAPINFOHEADER()
+        
+        obj.format_data_size    = self.read_uint32()
+        obj.image_width         = self.read_uint32()
+        obj.image_height        = self.read_uint32()
+        obj.reserved            = self.read_uint16()
+        obj.bpp                 = self.read_uint16()
+        obj.compression_id      = self.read(4)
+        obj.image_size          = self.read_uint32()
+        obj.h_pixels_meter      = self.read_uint32()
+        obj.v_pixels_meter      = self.read_uint32()
+        obj.colors              = self.read_uint32()
+        obj.important_colors    = self.read_uint32()
+        obj.codec_data          = self.read_subsegment(obj.format_data_size -
+                                                       40)
+        
+        return obj
 
 
+    class BITMAPINFOHEADER(object):
+        def __repr__(self):
+            buffer  = "BITMAPINFOHEADER structure: \n"
+            buffer += " %-35s : %s\n" % ("Format Data Size", self.format_data_size)
+            buffer += " %-35s : %s\n" % ("Image Width", self.image_width)
+            buffer += " %-35s : %s\n" % ("Image Height", self.image_height)
+            buffer += " %-35s : %s\n" % ("Reserved", self.reserved)
+            buffer += " %-35s : %s\n" % ("Bits Per Pixel Count", self.bpp)
+            buffer += " %-35s : %s\n" % ("Compression ID", self.compression_id)
+            buffer += " %-35s : %s\n" % ("Image Size", self.image_size)
+            buffer += " %-35s : %s\n" % ("Horizontal Pixels Per Meter", self.h_pixels_meter)
+            buffer += " %-35s : %s\n" % ("Vertical Pixels Per Meter", self.v_pixels_meter)
+            buffer += " %-35s : %s\n" % ("Colors Used Count", self.colors)
+            buffer += " %-35s : %s\n" % ("Important Colors Count", self.important_colors)
+            buffer += " %-35s : %s\n" % ("Codec Specific Data", self.codec_data)
+
+            return buffer
+        
     # Used in ASF and AVI parser, contains audio information
     class WAVEFORMATEX(object):
         codec_ids = {
@@ -254,60 +306,5 @@ class BinaryStream(object):
             buffer += " %-35s : %s\n" % ("Codec Specific Data Size",self.codec_size)
             buffer += " %-35s : %s\n" % ("Codec Specific Data", repr(self.codec_data))
             
-            return buffer            
-    
-    
-    def read_waveformatex(self):
-        obj = self.WAVEFORMATEX()
-        
-        obj.codec_id = self.read_uint16()
-        obj.channels = self.read_uint16()
-        obj.sample_rate = self.read_uint32()
-        obj.bit_rate = self.read_uint32()
-        obj.block_alignment = self.read_uint16()
-        obj.bits_per_sample = self.read_uint16()
-        obj.codec_size = self.read_uint16()
-        obj.codec_data = self.read_subsegment(obj.codec_size)
-        return obj
-
-
-    class BITMAPINFOHEADER(object):
-        def __repr__(self):
-            buffer  = "BITMAPINFOHEADER structure: \n"
-            buffer += " %-35s : %s\n" % ("Format Data Size", self.format_data_size)
-            buffer += " %-35s : %s\n" % ("Image Width", self.image_width)
-            buffer += " %-35s : %s\n" % ("Image Height", self.image_height)
-            buffer += " %-35s : %s\n" % ("Reserved", self.reserved)
-            buffer += " %-35s : %s\n" % ("Bits Per Pixel Count", self.bpp)
-            buffer += " %-35s : %s\n" % ("Compression ID", self.compression_id)
-            buffer += " %-35s : %s\n" % ("Image Size", self.image_size)
-            buffer += " %-35s : %s\n" % ("Horizontal Pixels Per Meter", self.h_pixels_meter)
-            buffer += " %-35s : %s\n" % ("Vertical Pixels Per Meter", self.v_pixels_meter)
-            buffer += " %-35s : %s\n" % ("Colors Used Count", self.colors)
-            buffer += " %-35s : %s\n" % ("Important Colors Count", self.important_colors)
-            buffer += " %-35s : %s\n" % ("Codec Specific Data", self.codec_data)
-
-            return buffer
-    
-    def read_bitmapinfoheader(self):
-        obj = self.BITMAPINFOHEADER()
-        
-        obj.format_data_size    = self.read_uint32()
-        obj.image_width         = self.read_uint32()
-        obj.image_height        = self.read_uint32()
-        obj.reserved            = self.read_uint16()
-        obj.bpp                 = self.read_uint16()
-        obj.compression_id      = self.read(4)
-        obj.image_size          = self.read_uint32()
-        obj.h_pixels_meter      = self.read_uint32()
-        obj.v_pixels_meter      = self.read_uint32()
-        obj.colors              = self.read_uint32()
-        obj.important_colors    = self.read_uint32()
-        obj.codec_data          = self.read_subsegment(obj.format_data_size -
-                                                       40)
-        
-        return obj
-
-
-
+            return buffer    
 
