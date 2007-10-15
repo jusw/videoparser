@@ -89,7 +89,7 @@ class Parser(plugins.BaseParser):
                     stream.set_width(format.image_width)
                     stream.set_height(format.image_height)
                     stream.set_codec(format.compression_id)
-                    stream.set_duration(header.length /
+                    stream.set_duration(seconds=header.length /
                                         (header.rate / float(header.scale)))
                     
                 elif header.type == 'auds':
