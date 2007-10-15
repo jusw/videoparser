@@ -35,9 +35,9 @@ if __name__ == "__main__":
 
 import datetime
 
-import plugins
-import streams
-import time
+# Project modules
+import videoparser.plugins as plugins
+import videoparser.streams as streams
 
 # Define the structure of the movie atom
 atom_structure = {
@@ -104,16 +104,16 @@ atom_structure = {
 
 
 class Parser(plugins.BaseParser):
-    _endianess = streams.BIG_ENDIAN
-    _file_types = ['mov']
+    _endianess = streams.endian.big
+    _file_types = ['mov', 'mp4']
     
     def __init__(self):
         plugins.BaseParser.__init__(self)
         self._parse_level = 0
 
     def parse(self, filename, video):
-        
-        stream = streams.FileStream(filename, endianess=self._endianess)
+        stream = streams.factory.create_filestream(filename,
+                                                   endianess=self._endianess)
 
         # Make sure that we are dealing with a quicktime file format
         if stream.read(12) != '\x00\x00\x00 ftypqt  ':
@@ -124,6 +124,7 @@ class Parser(plugins.BaseParser):
         try:
             data = self.parse_atom(stream, atom_tree=atom_structure)
         except AssertionError:
+            raise
             return False
 
         # Extract required information from the tree and place it in the
@@ -175,7 +176,8 @@ class Parser(plugins.BaseParser):
         minor_version = data.read(4)
 
         if major_brand != 'qt  ':
-            raise AssertionError("Invalid parser for this file")
+            raise AssertionError("Invalid parser for this file " + \
+                                 "(major brand = %r)" % major_brand)
         
         while data.bytes_left():
             compat_brand = data.read(4)
@@ -246,7 +248,8 @@ class Parser(plugins.BaseParser):
         self.iprint("Component manufacturer", data.read_uint32())
         self.iprint("Component flags", data.read_uint32())
         self.iprint("Component flags mask", data.read_uint32())
-        self.iprint("Component name", data.read(data._length - data.tell()), True)
+        self.iprint("Component name", data.read(data._filesize - data.tell()),
+                    True)
         
         
 if __name__ == "__main__":
