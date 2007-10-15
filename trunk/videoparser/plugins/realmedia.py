@@ -24,30 +24,19 @@
 
 """
     RealMedia parser
-    Based on http://www.multimedia.cx/rmff.htm
-
+    Based on:
+        - http://www.multimedia.cx/rmff.htm
+        - http://wiki.multimedia.cx/index.php?title=RealMedia
 """
 
-# Only implement required information to retrieve video and audio information
-
 import struct
-import cStringIO
-import datetime
-import time
 
 # For testing
 if __name__ == "__main__":
     import sys; sys.path.append('../../'); sys.path.append('..')
 
-
 import videoparser.plugins as plugins
 import videoparser.streams as streams
-
-
-
-mime_types = {
-    'audio/x-pn-realaudio':     'audio',
-}
 
 class Parser(plugins.BaseParser):
     _endianess = streams.endian.big
@@ -59,44 +48,18 @@ class Parser(plugins.BaseParser):
     def parse(self, filename, video):
         stream = streams.factory.create_filestream(filename,
                                                    endianess=self._endianess)
+        if stream.read_fourcc() != '.RMF':
+            return false
+        stream.seek(0)
         
         data = self.parse_objects(stream)
-
 
         # Extract required information from the tree and place it in the
         # videofile object
         self.extract_information(data, video)
         
-    
-    def extract_information(self, data, video):
-        
-        for object in data:
+        return True
 
-            # Extract stream info
-            if isinstance(object, self.MediaProperties):
-                if object.mime_type == 'logical-fileinfo':
-                    continue
-                
-                if object.mime_type == 'audio/x-pn-realaudio':
-                    stream = video.new_audio_stream()
-                    
-                    data = object.type_specific_data
-                    stream.set_duration(object.duration * 1000)
-                    stream.set_sample_rate(data.sample_rate)
-                    stream.set_bitrate(data.sample_size)
-                    stream.set_channels(data.num_channels)
-                    stream.set_codec(data.fourcc_string)
-                if object.mime_type == 'video/x-pn-realvideo':
-                    stream = video.new_video_stream()
-                    data = object.type_specific_data
-
-                    stream.set_duration(object.duration * 1000)
-                    stream.set_width(data.width)
-                    stream.set_height(data.height)
-                    stream.set_framerate(data.fps)
-                    stream.set_codec(data.codec)
-                
-                
     def parse_objects(self, stream):
         objects = []
         
@@ -134,6 +97,31 @@ class Parser(plugins.BaseParser):
         return objects
 
 
+    def extract_information(self, data, video):
+        for object in data:
+            if isinstance(object, self.MediaProperties):
+                if object.mime_type == 'logical-fileinfo':
+                    continue
+                
+                if object.mime_type == 'audio/x-pn-realaudio':
+                    stream = video.new_audio_stream()
+                    data = object.type_specific_data
+                    stream.set_duration(microseconds=object.duration * 1000)
+                    stream.set_sample_rate(data.sample_rate)
+                    stream.set_bitrate(data.sample_size)
+                    stream.set_channels(data.num_channels)
+                    stream.set_codec(data.fourcc_string)
+                    
+                if object.mime_type == 'video/x-pn-realvideo':
+                    stream = video.new_video_stream()
+                    data = object.type_specific_data
+                    stream.set_duration(microseconds=object.duration * 1000)
+                    stream.set_width(data.width)
+                    stream.set_height(data.height)
+                    stream.set_framerate(data.fps)
+                    stream.set_codec(data.codec)
+                    
+                    
     def _parse_realmedia_file(self, data):
         """  RealMedia file header (.RMF) """
         return None
