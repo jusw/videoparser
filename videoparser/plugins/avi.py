@@ -34,8 +34,14 @@ import struct
 import cStringIO
 
 
+# For testing
+if __name__ == "__main__":
+    import sys; sys.path.append('../../'); sys.path.append('..')
+
 import videoparser.plugins as plugins
 import videoparser.streams as streams
+
+__all__ = ['Parser']
 
 
 
@@ -65,7 +71,6 @@ class Parser(plugins.BaseParser):
         
         header = self.parse_block(stream)
         self.extract_information(header, video)
-        
         return True
     
     
@@ -196,7 +201,8 @@ class Parser(plugins.BaseParser):
         def __repr__(self):
             buffer = "ListItem => type: %s size: %s\n" % (self.type, self.size)
             for entry in self.childs:
-                buffer += "\n".join(["   %s" % line for line in repr(entry).split('\n')])
+                buffer += "\n".join(["   %s" % line for line in
+                                     repr(entry).split('\n')])
                 buffer += "\n"
 
             buffer = buffer[:-1]            
@@ -211,14 +217,18 @@ class Parser(plugins.BaseParser):
     
         def __repr__(self):
             buffer  = "AVIMAINHEADER structure:\n"
-            buffer += " %-30s: %s\n" % ('Microseconds per frame', self.ms_per_frame)
-            buffer += " %-30s: %s\n" % ('Max bytes per frame', self.max_bytes_per_frame)
-            buffer += " %-30s: %s\n" % ('Padding Granularity', self.padding_granularity)
+            buffer += " %-30s: %s\n" % ('Microseconds per frame',
+                                        self.ms_per_frame)
+            buffer += " %-30s: %s\n" % ('Max bytes per frame',
+                                        self.max_bytes_per_frame)
+            buffer += " %-30s: %s\n" % ('Padding Granularity',
+                                        self.padding_granularity)
             buffer += " %-30s: %s\n" % ('Flags', self.flags)
             buffer += " %-30s: %s\n" % ('Total frames', self.total_frames)
             buffer += " %-30s: %s\n" % ('Initial frames', self.initial_frames)
             buffer += " %-30s: %s\n" % ('Streams', self.streams)
-            buffer += " %-30s: %s\n" % ('Suggested Buffer Size', self.suggested_buffer_size)
+            buffer += " %-30s: %s\n" % ('Suggested Buffer Size',
+                                        self.suggested_buffer_size)
             buffer += " %-30s: %s\n" % ('Width', self.width)
             buffer += " %-30s: %s\n" % ('Height', self.height)
             buffer += " %-30s: %s\n" % ('Reserved[4]', self.reserved)
