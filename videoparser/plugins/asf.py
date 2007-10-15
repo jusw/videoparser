@@ -32,6 +32,12 @@
 # Built-in modules
 import datetime
 
+# For testing
+if __name__ == "__main__":
+    import sys; sys.path.append('../../'); sys.path.append('..')
+
+__all__ = ['Parser']
+
 # Project modules
 import videoparser.plugins as plugins
 import videoparser.streams as streams
@@ -97,7 +103,7 @@ class Parser(plugins.BaseParser):
         
         framerates = {}
         video.set_container('ASF')
-        
+
         # Loop over all objects in the header, first search for the
         # StreamProperties
         for object in header.objects:
@@ -110,7 +116,9 @@ class Parser(plugins.BaseParser):
                     stream.set_channels(object.type_data.channels)
                     stream.set_sample_rate(object.type_data.sample_rate)
                     stream.set_codec(object.type_data.codec_ids.get(
-                        object.type_data.codec_id, 'Unknown'))
+                        object.type_data.codec_id, object.type_data.codec_id))
+                    stream.set_bitrate(object.type_data.bits_per_sample)
+
                 if object.type == 'ASF_Video_Media':
                     if not stream:
                         stream = video.new_video_stream(object.index)
@@ -118,13 +126,15 @@ class Parser(plugins.BaseParser):
                     stream.set_height(object.type_data.height)
                     stream.set_codec(object.type_data.format_data.compression_id)
         
-        
+                    
         for object in header.objects:
             if isinstance(object, self.FileProperties):
-                #print object.play_duration
-                pass
-            
-             # Extract additional information from the HeaderExtension
+                for stream in video.video_streams:
+                    stream.set_duration(seconds=object.play_duration.seconds,
+                                        microseconds= \
+                                            object.play_duration.microseconds)
+                
+            # Extract additional information from the HeaderExtension
             if isinstance(object, self.HeaderExtension):
                 for sub_object in object.extension_data:
                     if isinstance(sub_object, self.ExtendedStreamProperties):
