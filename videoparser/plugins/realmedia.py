@@ -32,8 +32,9 @@
 
 import struct
 import cStringIO
-
+import datetime
 import time
+
 # For testing
 if __name__ == "__main__":
     import sys; sys.path.append('../../'); sys.path.append('..')
@@ -70,21 +71,32 @@ class Parser(plugins.BaseParser):
     def extract_information(self, data, video):
         
         for object in data:
-            pass
-            #print object
-            #
-            ## Extract stream info
-            #if isinstance(object, self.MediaProperties):
-            #    if object.mime_type == 'logical-fileinfo':
-            #        continue
-            #    if object.mime_type != 'video/x-pn-realvideo':
-            #        continue
-                
-                
 
+            # Extract stream info
+            if isinstance(object, self.MediaProperties):
+                if object.mime_type == 'logical-fileinfo':
+                    continue
+                
+                if object.mime_type == 'audio/x-pn-realaudio':
+                    stream = video.new_audio_stream()
                     
-        
-    
+                    data = object.type_specific_data
+                    stream.set_duration(object.duration * 1000)
+                    stream.set_sample_rate(data.sample_rate)
+                    stream.set_bitrate(data.sample_size)
+                    stream.set_channels(data.num_channels)
+                    stream.set_codec(data.fourcc_string)
+                if object.mime_type == 'video/x-pn-realvideo':
+                    stream = video.new_video_stream()
+                    data = object.type_specific_data
+
+                    stream.set_duration(object.duration * 1000)
+                    stream.set_width(data.width)
+                    stream.set_height(data.height)
+                    stream.set_framerate(data.fps)
+                    stream.set_codec(data.codec)
+                
+                
     def parse_objects(self, stream):
         objects = []
         
@@ -176,7 +188,6 @@ class Parser(plugins.BaseParser):
             else:
                 obj.type_specific_data = type_data
             
-            print obj.type_specific_data
         return obj
 
 
