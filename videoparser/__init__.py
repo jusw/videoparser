@@ -1,3 +1,4 @@
+"""Parser to retrieve header information from various video formats."""
 #
 #  Copyright (c) 2007 Michael van Tellingen <michaelvantellingen@gmail.com>
 #  All rights reserved.
@@ -32,7 +33,8 @@ import streams
 
 __all__ = ['VideoParser']
 __author__ = "Michael van Tellingen <michaelvantellingen at gmail.com>"
-__version__ = "0.1"
+
+from videoparser.version import version as __version__
 
 # List of plugins
 parser_plugins = ['asf', 'matroska', 'avi', 'realmedia', 'quicktime']
@@ -94,11 +96,11 @@ class VideoParser(object):
             parser = None
         
         guessed_parser = parser
-        if guessed_parser and self.parse_file_with(filename, parser, video):
+        if guessed_parser and self._parse_file_with(filename, parser, video):
             return video
         
         # Don't try other parsers
-        return None
+        #return None
     
         # Try all parsers then
         for parser in self.parsers:
@@ -116,7 +118,7 @@ class VideoParser(object):
             
         # Check if this is the right parser for the file
         try:
-            print "Trying to parse %s with %s" % (filename, parser)
+            #print "Trying to parse %s with %s" % (filename, parser)
             if parser.parse(filename, video):
                 return True
             
