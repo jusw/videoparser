@@ -31,9 +31,6 @@
 
 import struct
 
-# For testing
-if __name__ == "__main__":
-    import sys; sys.path.append('../../'); sys.path.append('..')
 
 import videoparser.plugins as plugins
 import videoparser.streams as streams
@@ -49,7 +46,7 @@ class Parser(plugins.BaseParser):
         stream = streams.factory.create_filestream(filename,
                                                    endianess=self._endianess)
         if stream.read_fourcc() != '.RMF':
-            return false
+            return False
         stream.seek(0)
         
         data = self.parse_objects(stream)
@@ -391,19 +388,5 @@ class Parser(plugins.BaseParser):
                                             self.codec_extradata)
     
             return buffer
-        
-        
-if __name__ == "__main__":
-    import sys
-    import videofile
-    
-    video = videofile.VideoFile()
-    p = Parser()
-    for arg in sys.argv[1:]:
-        p.parse(arg, video)
-
-    print video
-    
-
 
 
