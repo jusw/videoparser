@@ -31,23 +31,38 @@ import videofile
 import streams
 
 __all__ = ['VideoParser']
+__author__ = "Michael van Tellingen <michaelvantellingen at gmail.com>"
+__version__ = "0.1"
 
 # List of plugins
 parser_plugins = ['asf', 'matroska', 'avi', 'realmedia', 'quicktime']
 
 class VideoParser(object):
-    def __init__(self):
-        self.parsers = []
+    """ The VideoParser object will first guess the required parser based on
+        the file extension. If that fails it will try each available parser.
         
+        On success it will return the videofile.VideoFile object
+    
+        Example:
+            parser = VideoParser()
+            video = parser.parse_file("video.mkv")
+            
+            for video_stream in video.video_streams:
+                print video_stream.resolution
+                print video_stream.codec"""
+
+    def __init__(self):
+        """ Initialise the VideoParser object."""
+        self.parsers = []
         self._import_parsers()
     
     def _import_parsers(self):
-        
+        """ Import the specified parsers in the global list parser_plugins. """
         # Import the parsers
         for plugin_filename in parser_plugins:
             try:
-                module = __import__("videoparser.plugins." + plugin_filename, None, None,
-                                    "plugins")
+                module = __import__("videoparser.plugins." + plugin_filename,
+                                    None, None, "plugins")
             except ImportError, err:
                 raise
                 print "Unable to open parser module '%s'" % plugin_filename 
@@ -64,6 +79,10 @@ class VideoParser(object):
 
     
     def parse_file(self, filename):
+        """ Parse the given file and return a videofile.VideoFile object on
+            success or None when there was a parsing error or no matching
+            parser was found. """
+            
         video = videofile.VideoFile()
         
 
@@ -88,12 +107,12 @@ class VideoParser(object):
             if parser == guessed_parser:
                 continue
             
-            if self.parse_file_with(filename, parser, video):
+            if self._parse_file_with(filename, parser, video):
                 return video
     
         return None
     
-    def parse_file_with(self, filename, parser, video):
+    def _parse_file_with(self, filename, parser, video):
             
         # Check if this is the right parser for the file
         try:
