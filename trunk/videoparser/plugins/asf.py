@@ -112,7 +112,7 @@ class Parser(plugins.BaseParser):
                     stream.set_sample_rate(type_data.sample_rate)
                     stream.set_codec(type_data.codec_ids.get(
                         type_data.codec_id, type_data.codec_id))
-                    stream.set_bitrate(type_data.bits_per_sample)
+                    stream.set_bit_per_sample(type_data.bits_per_sample)
 
                 if object.type == 'ASF_Video_Media':
                     if not stream:
