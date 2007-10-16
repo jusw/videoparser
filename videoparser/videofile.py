@@ -1,3 +1,5 @@
+"""Object which contains specific header information from various video
+formats"""
 #
 #  Copyright (c) 2007 Michael van Tellingen <michaelvantellingen@gmail.com>
 #  All rights reserved.
@@ -25,12 +27,18 @@
 
 import datetime
 
+from videoparser.version import version as __version__
+
+
+__all__ = ['VideoFile', 'VideoStream', 'AudioStream']
+__author__ = "Michael van Tellingen <michaelvantellingen at gmail.com>"
+
 class VideoFile(object):
     def __init__(self):
         self._streams = {}
         self._format = ''
         
-    def add_stream(self, stream, index=None):
+    def _add_stream(self, stream, index=None):
         if index is None:
             index = len(self._streams) + 1
         self._streams[index] = stream
@@ -43,12 +51,12 @@ class VideoFile(object):
     
     def new_video_stream(self, index=None):
         stream = VideoStream()
-        self.add_stream(stream, index)
+        self._add_stream(stream, index)
         return stream
     
     def new_audio_stream(self, index=None):
         stream = AudioStream()
-        self.add_stream(stream, index)
+        self._add_stream(stream, index)
         return stream
     
     def __repr__(self):
@@ -74,10 +82,11 @@ class VideoFile(object):
         for stream_id in self._streams:
             if isinstance(self._streams[stream_id], AudioStream):
                 yield self._streams[stream_id]
-
+    audio_streams = property(fget=get_audio_streams)
 
 
 class VideoStream(object):
+    """ Contains information from a video stream."""
     def __init__(self):
         self._duration = 0
         self._framerate = 0
@@ -131,12 +140,14 @@ class VideoStream(object):
         
     
 class AudioStream(object):
+    """ Contains information from a audio stream."""
     def __init__(self):
         self._channels = 0
         self._codec = ''
         self._sample_rate = 0
         self._duration = 0
         self._bitrate = 0
+        self._bits_per_sample = 0
         self.type = 'Audio'
         
     def set_channels(self, num):
@@ -151,15 +162,20 @@ class AudioStream(object):
     def set_bitrate(self, bitrate):
         self._bitrate = bitrate
 
+    def set_bit_per_sample(self, bits):
+        self._bits_per_sample = bits
+        
     def set_duration(self, **kwargs):
         if 'seconds' not in kwargs and 'microseconds' not in kwargs:
             raise ValueError("Execpted seconds or microseconds keyword arg")
         self._duration = datetime.timedelta(**kwargs)
 
     def __repr__(self):
-        return "codec: %s, length: %s, channel: %d, sample rate: %d, bitrate: %s" % (
-            self._codec, self._duration, self._channels, self._sample_rate, self._bitrate)
-
+        return ("codec: %s, length: %s, channels: %d, sample-rate: %d, " +
+               "bit-rate: %s kb/s, Bits per sample: %s") % (
+            self._codec, self._duration, self._channels, self._sample_rate,
+            self._bitrate, self._bits_per_sample)
 
     
+        
 
