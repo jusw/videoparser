@@ -105,7 +105,7 @@ class Parser(plugins.BaseParser):
                     data = object.type_specific_data
                     stream.set_duration(microseconds=object.duration * 1000)
                     stream.set_sample_rate(data.sample_rate)
-                    stream.set_bitrate(data.sample_size)
+                    stream.set_bit_per_sample(data.sample_size)
                     stream.set_channels(data.num_channels)
                     stream.set_codec(data.fourcc_string)
                     
