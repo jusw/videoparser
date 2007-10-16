@@ -120,13 +120,14 @@ class Parser(plugins.BaseParser):
 
         # Make sure that we are dealing with a quicktime file format
         if stream.read(12) != '\x00\x00\x00 ftypqt  ':
-            return False
+            print "Warning: This file does not start with the quicktime sig.."
         stream.seek(0)
         
         # Build a tree with all information extracted
         dest_tree = {}
         try:
-            self.parse_atom(stream, atom_tree=atom_structure, dest_tree=dest_tree)
+            self.parse_atom(stream, atom_tree=atom_structure,
+                            dest_tree=dest_tree)
         except AssertionError:
             raise
             return False
@@ -207,12 +208,17 @@ class Parser(plugins.BaseParser):
                 stream.set_codec(sample_table['format'])
                 
                 # Calculate the framerate
+                stream_duration = 0
                 frames = 0
                 for s_count, s_duration in sample_atom['stts'].sample_table:
-                    frames += s_count / s_duration
-                stream.set_framerate((frames / float(duration)) * timescale)
+                    stream_duration += (s_count * s_duration)
+                    frames += s_count
+                    
+                stream.set_framerate(timescale / (stream_duration /
+                                                  float(frames)))
+                stream.set_duration(seconds=stream_duration / float(timescale))
                 
-                
+                #print trak['tkhd'].duration, duration, timescale
             elif track_type == 'soun':
                 stream = video.new_audio_stream()
                 stream.set_codec(sample_table['format'])
