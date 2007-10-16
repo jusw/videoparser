@@ -1,3 +1,4 @@
+"""ASF Parser Plugin."""
 #
 #  Copyright (c) 2007 Michael van Tellingen <michaelvantellingen@gmail.com>
 #  All rights reserved.
@@ -25,9 +26,6 @@
 # Built-in modules
 import datetime
 
-# For testing
-if __name__ == "__main__":
-    import sys; sys.path.append('../../'); sys.path.append('..')
 
 __all__ = ['Parser']
 
@@ -38,14 +36,16 @@ import videoparser.streams as streams
 
 # Only implement required information to retrieve video and audio information
 guid_list = {
-    'D2D0A440-E307-11D2-97F0-00A0C95EA850': 'ASF_Extended_Content_Description_Object',
+    'D2D0A440-E307-11D2-97F0-00A0C95EA850':
+                                    'ASF_Extended_Content_Description_Object',
     '75B22630-668E-11CF-A6D9-00AA0062CE6C': 'ASF_Header_Object',
     '75B22633-668E-11CF-A6D9-00AA0062CE6C': 'ASF_Content_Description_Object',
     '8CABDCA1-A947-11CF-8EE4-00C00C205365': 'ASF_File_Properties_Object',
     '5FBF03B5-A92E-11CF-8EE3-00C00C205365': 'ASF_Header_Extension_Object',
     '86D15240-311D-11D0-A3A4-00A0C90348F6': 'ASF_Codec_List_Object',
     'B7DC0791-A9B7-11CF-8EE6-00C00C205365': 'ASF_Stream_Properties_Object',
-    '7BF875CE-468D-11D1-8D82-006097C9A2B2': 'ASF_Stream_Bitrate_Properties_Object',
+    '7BF875CE-468D-11D1-8D82-006097C9A2B2':
+                                     'ASF_Stream_Bitrate_Properties_Object',
     'F8699E40-5B4D-11CF-A8FD-00805F5C442B': 'ASF_Audio_Media',
     'BC19EFC0-5B4D-11CF-A8FD-00805F5C442B': 'ASF_Video_Media',
     'BFC3CD50-618F-11CF-8BB2-00AA00B4E220': 'ASF_Audio_Spread',
@@ -53,7 +53,8 @@ guid_list = {
     '7C4346A9-EFE0-4BFC-B229-393EDE415C85': 'ASF_Language_List_Object',
     'ABD3D211-A9BA-11cf-8EE6-00C00C205365': 'ASF_Reserved_1',
     'C5F8CBEA-5BAF-4877-8467-AA8C44FA4CCA': 'ASF_Metadata_Object',
-    '14E6A5CB-C672-4332-8399-A96952065B5A': 'ASF_Extended_Stream_Properties_Object',
+    '14E6A5CB-C672-4332-8399-A96952065B5A':
+                                    'ASF_Extended_Stream_Properties_Object',
     'D6E229DF-35DA-11D1-9034-00A0C90349BE': 'ASF_Index_Parameters_Object',
     'D4FED15B-88D3-454F-81F0-ED5C45999E24': 'ASF_Stream_Prioritization_Object',
     '1806D474-CADF-4509-A4BA-9AABCB96AAE8': 'ASF_Padding_Object',
@@ -77,15 +78,15 @@ class Parser(plugins.BaseParser):
         object_id   = stream.read_guid()
         
         if guid_list.get(object_id) != 'ASF_Header_Object':
-            raise AssertionError("Invalid parser for this file")
+            return False
 
         try:                    
             header = self.parse_header(stream)
         except AssertionError:
-            raise
-            raise AssertionError("Error while parsing file.")
+            return False
     
-        return self.extract_information(header, video)
+        self.extract_information(header, video)
+        return True
     
     
     def extract_information(self, header, video):
@@ -102,22 +103,23 @@ class Parser(plugins.BaseParser):
         for object in header.objects:
             if isinstance(object, self.StreamProperties):
                 stream = video.get_stream(object.index)
-
+                type_data = object.type_data
+                
                 if object.type == 'ASF_Audio_Media':
                     if not stream:
                         stream = video.new_audio_stream(object.index)
-                    stream.set_channels(object.type_data.channels)
-                    stream.set_sample_rate(object.type_data.sample_rate)
-                    stream.set_codec(object.type_data.codec_ids.get(
-                        object.type_data.codec_id, object.type_data.codec_id))
-                    stream.set_bitrate(object.type_data.bits_per_sample)
+                    stream.set_channels(type_data.channels)
+                    stream.set_sample_rate(type_data.sample_rate)
+                    stream.set_codec(type_data.codec_ids.get(
+                        type_data.codec_id, type_data.codec_id))
+                    stream.set_bitrate(type_data.bits_per_sample)
 
                 if object.type == 'ASF_Video_Media':
                     if not stream:
                         stream = video.new_video_stream(object.index)
-                    stream.set_width(object.type_data.width)
-                    stream.set_height(object.type_data.height)
-                    stream.set_codec(object.type_data.format_data.compression_id)
+                    stream.set_width(type_data.width)
+                    stream.set_height(type_data.height)
+                    stream.set_codec(type_data.format_data.compression_id)
         
                     
         for object in header.objects:
@@ -135,7 +137,8 @@ class Parser(plugins.BaseParser):
                         # Framerate (required for video)
                         stream = video.get_stream(sub_object.stream_number)
                         if stream.type == 'Video':
-                            stream.set_framerate(1 / (sub_object.avg_time_per_frame / 10000000.0))
+                            stream.set_framerate(1 / (
+                                sub_object.avg_time_per_frame / 10000000.0))
                         
     
         return video
@@ -290,7 +293,8 @@ class Parser(plugins.BaseParser):
                 # Skip unknown guid's, since authors are allowed to create
                 # there own
                 #
-                #print "WARNING: object_id '%s' not found in guid_list" % object_id
+                #print "WARNING: object_id '%s' not found in guid_list" % \
+                # object_id
                 #header.extension_data.append(object_id)
                 continue
                 
@@ -314,7 +318,8 @@ class Parser(plugins.BaseParser):
                 obj = 'ASF_Index_Parameters_Object (TODO)'
             
             else:
-                raise AssertionError("object_type '%s' not processed in header_extension" % object_type)
+                raise AssertionError("object_type '%s' not processed in " +
+                                     "header_extension" % object_type)
             
             #if obj is None:
             #    raise AssertionError("obj is None: %s" % object_type)
@@ -481,7 +486,8 @@ class Parser(plugins.BaseParser):
             buffer += " %-30s: %s\n" % ('File ID', self.id)
             buffer += " %-30s: %s\n" % ('File Size', self.size)
             buffer += " %-30s: %s\n" % ('Creation Date', self.create_date)
-            buffer += " %-30s: %s\n" % ('Data Packets Count', self.packet_count)
+            buffer += " %-30s: %s\n" % ('Data Packets Count',
+                                        self.packet_count)
             buffer += " %-30s: %s\n" % ('Play Duration', self.play_duration)
             buffer += " %-30s: %s\n" % ('Send Duration', self.send_duration)
             buffer += " %-30s: %s\n" % ('Preroll', repr(self.preroll))
@@ -640,18 +646,6 @@ class Parser(plugins.BaseParser):
                                         self.stream_properties_object)
     
             return buffer
-                     
-                     
-if __name__ == "__main__":
-    import sys
-    import videofile
-    
-    video = videofile.VideoFile()
 
-    p = Parser()
-    p.parse(sys.argv[1], video)
-
-    print video
-    
 
 
