@@ -120,7 +120,11 @@ class Parser(plugins.BaseParser):
 
         # Make sure that we are dealing with a quicktime file format
         if stream.read(12) != '\x00\x00\x00 ftypqt  ':
-            print "Warning: This file does not start with the quicktime sig.."
+            #print "Warning: This file does not start with the quicktime sig.."
+            stream.seek(4)
+            if stream.read(4) != 'moov':
+                return False
+            
         stream.seek(0)
         
         # Build a tree with all information extracted
@@ -136,6 +140,7 @@ class Parser(plugins.BaseParser):
         # videofile object
         self.extract_information(dest_tree, video)
         
+        video.set_container("QuickTime")
         return True
     
     def parse_ftyp(self, data):
@@ -224,7 +229,7 @@ class Parser(plugins.BaseParser):
                 stream.set_codec(sample_table['format'])
                 stream.set_channels(sample_table['channels'])
                 stream.set_sample_rate(sample_table['sample_rate'])
-                stream.set_bitrate(sample_table['bits'])
+                stream.set_bit_per_sample(sample_table['bits'])
 
 
     def validate_file_format(self, data):
