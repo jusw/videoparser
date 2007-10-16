@@ -28,10 +28,6 @@
     See http://www.matroska.org/technical/specs/index.html
 """
 
-# For testing
-if __name__ == "__main__":
-    import sys; sys.path.append('../../'); sys.path.append('..')
-
 # Project modules
 import videoparser.plugins as plugins
 import videoparser.streams as streams
@@ -325,20 +321,3 @@ class Parser(plugins.BaseParser):
             if len(items) == 0:
                 raise AttributeError(key)
             return items
-
-    
-if __name__ == "__main__":
-    import sys
-    import videofile
-
-    video = videofile.VideoFile()
-
-    p = Parser(file)
-
-    p.parse(sys.argv[1], video)
-
-    print video
-
-    
-    
-
