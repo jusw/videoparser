@@ -1,0 +1,11 @@
+Metadata-Version: 1.0
+Name: videoparser
+Version: 0.1
+Summary: Python parser to retrieve header information from various video formats.
+Home-page: http://videoparser.googlecode.com/
+Author: Michael van Tellingen
+Author-email: michaelvantellingen@gmail.com
+License: 2-clause BSD
+Description: UNKNOWN
+Keywords: video header formats matroska avi asf quicktime realmedia
+Platform: UNKNOWN
