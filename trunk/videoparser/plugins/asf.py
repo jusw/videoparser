@@ -22,13 +22,6 @@
 #  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-"""
-    http://msdn2.microsoft.com/en-us/library/ms779636.aspx
-    
-    This is a really basic parser designed to get the required information fast
-"""
-
-
 # Built-in modules
 import datetime
 

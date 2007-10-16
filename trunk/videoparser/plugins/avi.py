@@ -22,30 +22,22 @@
 #  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-"""
-    http://msdn2.microsoft.com/en-us/library/ms779636.aspx
-    
-    This is a really basic parser designed to get the required information fast
-"""
-
-# Only implement required information to retrieve video and audio information
-
-import struct
-import cStringIO
+__all__ = ['Parser']
 
 
 # For testing
 if __name__ == "__main__":
-    import sys; sys.path.append('../../'); sys.path.append('..')
+    import sys
+    sys.path.append('../../')
+    sys.path.append('..')
 
+# Project modules
 import videoparser.plugins as plugins
 import videoparser.streams as streams
 
-__all__ = ['Parser']
-
-
 
 class Parser(plugins.BaseParser):
+    """ Parser for AVI RIFF Containers """
     _endianess = streams.endian.little
     _file_types = ['avi']
     
@@ -56,7 +48,6 @@ class Parser(plugins.BaseParser):
         self._last_stream_header = None
 
     def parse(self, filename, video):
-        
         stream = streams.factory.create_filestream(filename,
                                                    endianess=self._endianess)
 
@@ -64,17 +55,18 @@ class Parser(plugins.BaseParser):
         if stream.read(4) != 'RIFF':
             return False
 
+        # Unused at this point
         filesize = stream.read_uint32()
         filetype = stream.read(4)
         
         # Parse the first block (which is a header)
         
-        header = self.parse_block(stream)
-        self.extract_information(header, video)
+        header = self._parse_block(stream)
+        self._extract_information(header, video)
         return True
     
     
-    def extract_information(self, header, video):
+    def _extract_information(self, header, video):
         
         video.set_container('AVI RIFF')
         for child in header.childs:
@@ -105,14 +97,14 @@ class Parser(plugins.BaseParser):
                                                           'Unknown'))
         
     
-    def parse_block(self, stream):
+    def _parse_block(self, stream):
         id = stream.read(4)
         if id == 'LIST':
-            return self.parse_list(stream)
+            return self._parse_list(stream)
         else:
-            return self.parse_chunk(stream, id)
+            return self._parse_chunk(stream, id)
             
-    def parse_list(self, stream):
+    def _parse_list(self, stream):
         item = self.ListItem()
         item.size = stream.read_uint32()
         item.type = stream.read_dword()
@@ -122,13 +114,13 @@ class Parser(plugins.BaseParser):
         
         data = stream.read_subsegment(item.size-4 )
         while data.tell() < item.size - 4:
-            sub_item = self.parse_block(data)
+            sub_item = self._parse_block(data)
             item.childs.append(sub_item)
 
         
         return item
 
-    def parse_chunk(self, stream, chunk_id):
+    def _parse_chunk(self, stream, chunk_id):
         
         chunk_size = stream.read_uint32()
         chunk_size += chunk_size % 2 # Align to dword
@@ -136,10 +128,10 @@ class Parser(plugins.BaseParser):
         if chunk_id in ['avih', 'strh', 'strf']:
             data = stream.read_subsegment(chunk_size)
             if chunk_id == 'avih':
-                return self.parse_mainheader(data)
+                return self._parse_mainheader(data)
             
             elif chunk_id == 'strh':
-                return self.parse_streamheader(data)
+                return self._parse_streamheader(data)
                 
             elif chunk_id == 'strf':
                 if self._last_stream_header.type == 'vids':
@@ -155,7 +147,7 @@ class Parser(plugins.BaseParser):
         
         return None
 
-    def parse_streamheader(self, data):
+    def _parse_streamheader(self, data):
         header = self.AVIStreamHeader()
         header.type = data.read(4)
         header.handler = data.read(4)
@@ -179,7 +171,7 @@ class Parser(plugins.BaseParser):
         return header
         
     
-    def parse_mainheader(self, data):
+    def _parse_mainheader(self, data):
         header = self.AVIMainHeader()
         header.ms_per_frame         = data.read_uint32()
         header.max_bytes_per_frame  = data.read_uint32()
@@ -262,17 +254,3 @@ class Parser(plugins.BaseParser):
             buffer += " %-30s: %s\n" % ('Frame bottom', self.frame_bottom)
     
             return buffer
-        
-        
-if __name__ == "__main__":
-    import sys
-    import videofile
-    
-    video = videofile.VideoFile()
-    p = Parser()
-    p.parse(sys.argv[1], video)
-
-    print video
-    
-
-

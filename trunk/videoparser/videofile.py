@@ -23,6 +23,8 @@
 #
 
 
+import datetime
+
 class VideoFile(object):
     def __init__(self):
         self._streams = {}
@@ -66,11 +68,14 @@ class VideoFile(object):
         for stream_id in self._streams:
             if isinstance(self._streams[stream_id], VideoStream):
                 yield self._streams[stream_id]
-
+    video_streams = property(fget=get_video_streams)
+    
     def get_audio_streams(self):
         for stream_id in self._streams:
             if isinstance(self._streams[stream_id], AudioStream):
                 yield self._streams[stream_id]
+
+
 
 class VideoStream(object):
     def __init__(self):
@@ -93,8 +98,10 @@ class VideoStream(object):
     def set_framerate(self, framerate):
         self._framerate = framerate
         
-    def set_duration(self, duration):
-        self._duration = duration
+    def set_duration(self, **kwargs):
+        if 'seconds' not in kwargs and 'microseconds' not in kwargs:
+            raise ValueError("Execpted seconds or microseconds keyword arg")
+        self._duration = datetime.timedelta(**kwargs)
         
     def set_bitrate(self, bitrate):
         pass
@@ -107,7 +114,8 @@ class VideoStream(object):
         
     def __repr__(self):
         return "codec: %s, length: %s, resolution: %dx%d, fps: %s" % (
-            self._codec, self._duration / 60.0, self._width, self._height, self._framerate)
+            self._codec, self._duration, self._width, self._height, self._framerate)
+
 
     def get_resolution(self):
         return (self._width, self._height)
@@ -118,7 +126,7 @@ class VideoStream(object):
     codec = property(fget=get_codec)
     
     def get_duration(self):
-        return self._duration / 60.0
+        return self._duration
     duration = property(fget=get_duration)
         
     
@@ -143,8 +151,10 @@ class AudioStream(object):
     def set_bitrate(self, bitrate):
         self._bitrate = bitrate
 
-    def set_duration(self, duration):
-        self._duration = duration
+    def set_duration(self, **kwargs):
+        if 'seconds' not in kwargs and 'microseconds' not in kwargs:
+            raise ValueError("Execpted seconds or microseconds keyword arg")
+        self._duration = datetime.timedelta(**kwargs)
 
     def __repr__(self):
         return "codec: %s, length: %s, channel: %d, sample rate: %d, bitrate: %s" % (

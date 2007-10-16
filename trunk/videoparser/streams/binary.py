@@ -96,6 +96,11 @@ class BinaryStream(object):
         """ Read a 32bits quicktime float."""
         # This comes from hachoir
         return self.read_int16() + float(self.read_uint16()) /65535
+
+    def read_qt_ufloat32(self):
+        """ Read a 32bits quicktime float."""
+        # This comes from hachoir
+        return self.read_uint16() + float(self.read_uint16()) /65535
     
     def read_uint64(self):
         """ Read an unsigned 64bit integer."""
@@ -154,7 +159,7 @@ class BinaryStream(object):
     def read_timestamp_win(self):
         timestamp_base = datetime.datetime(1601, 1, 1, 0, 0, 0)
         timestamp_value = datetime.timedelta(
-            microseconds=data.read_uint64()/10)
+            microseconds=self.read_uint64()/10)
         
         return timestamp_base + timestamp_value
     
@@ -287,11 +292,19 @@ class BinaryStream(object):
     # Used in ASF and AVI parser, contains audio information
     class WAVEFORMATEX(object):
         codec_ids = {
-            0x2000:     "AC3",
+            0x2004:     "A_REAL/COOK",
+            0x2003:     "A_REAL/28_8",
+            0x2002:     "A_REAL/14_4",
+            0x0130:     "A_REAL/SIPR",
+            0x0270:     "A_REAL/ATRC",
+            0x2001:     "A_DTS",
+            0x2000:     "A_AC3",
+            0x162:      "WMAP",
             0x161:      "WMA2",
+            0x160:      "WMA2",
             0x50:       "MP2",
             0x55:       "MP3",
-            0x1:        "PCM",
+            0x1:        "A_PCM/INT/LIT",
             'unknown':  "???",
         }
         

@@ -134,9 +134,9 @@ class Parser(plugins.BaseParser):
         video.set_container('matroska')
         
         tree = self._build_tree(stream)
-        
         self._extract_information(tree, video)
-
+    
+        return True
 
 
     def _build_tree(self, stream):
