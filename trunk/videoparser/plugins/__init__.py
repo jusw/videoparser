@@ -22,6 +22,66 @@
 #  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+import videoparser.types as types
+
+
 class BaseParser(object):
     pass
 
+
+
+class Structure(object):
+    _formatting = {types.bytes:     r'%r',
+                   types.stream:    r'%r',
+                   types.float:     r'%f',
+                   types.int:       r'%d',
+                   types.string:    r'%s'
+    }
+    
+    
+    def __init__(self, id):
+        self.id = id
+        self._values = {}
+        self._keys = []
+    
+    def set(self, key, value, type=types.bytes, description=''):
+        
+        # This should become a warning
+        if key in self._keys:
+            raise AssertionError("Duplicate key in structure")
+        
+        self._keys.append(key)
+        self._values[key] = (value, type, description)
+    
+
+    def __getattr__(self, key):
+        if key in self._keys:
+            return self._values[key][0]
+        
+        raise AttributeError("Attribute '%s' not found." % key)
+    
+
+    def __repr__(self):
+        buffer  = "%s structure:\n" % self.id
+        
+        for key in self._keys:
+            value, type, description = self._values[key]
+            
+            try:
+                buffer += " %-30s: " % description
+                
+                if type != types.object:
+                    buffer += self._formatting[type] %  value
+                    buffer += '\n'
+                    
+                else:
+                    buffer += '\n'
+                    buffer += "\n".join(["   %s" % line for line
+                                         in repr(value).split('\n')])
+                
+            except TypeError:
+                raise
+                print "Unable to print value '%s' with format '%s'" % (
+                    value, self._formatting[type])
+                raise
+        return buffer
