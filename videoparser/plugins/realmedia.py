@@ -57,7 +57,6 @@ class Parser(plugins.BaseParser):
 
     def parse_objects(self, stream):
         objects = []
-        
         while stream.bytes_left():
             id = stream.read_fourcc()
             size = stream.read_uint32()
@@ -123,31 +122,44 @@ class Parser(plugins.BaseParser):
 
     def _parse_fileproperties(self, data):
         """ Parse the File properties header (PROP) """
-
         obj = plugins.Structure('FileProperties')
         obj.set('version', data.read_uint16(), types.int, 'Version')
 
         if obj.version == 0:
             obj.set('max_bit_rate', data.read_uint32(),
                     types.int, 'Maximum bitrate')
+            
             obj.set('avg_bit_rate', data.read_uint32(),
                     types.int, 'Average bitrate')
+            
             obj.set('max_packet_size', data.read_uint32(),
                     types.int, 'Maximum packet size')
+            
             obj.set('avg_packet_size', data.read_uint32(),
                     types.int, 'Average packet size')
+            
             obj.set('num_packets', data.read_uint32(),
                     types.int, 'Number of packets')
-            obj.set('duration', data.read_uint32(), types.int, 'Duration')
-            obj.set('preroll', data.read_uint32(), types.int, 'Preroll')
+            
+            obj.set('duration', data.read_uint32(),
+                    types.int, 'Duration')
+            
+            obj.set('preroll', data.read_uint32(),
+                    types.int, 'Preroll')
+            
             obj.set('index_offset', data.read_uint32(),
                     types.int, 'Index offset')
+            
             obj.set('data_offset', data.read_uint32(),
                     types.int, 'Data offset')
+            
             obj.set('num_streams', data.read_uint16(),
                     types.int, 'Number of streams')
-            obj.set('flags', data.read_uint16(), types.int, 'Flags')
+            
+            obj.set('flags', data.read_uint16(),
+                    types.int, 'Flags')
     
+        
         return obj
     
     def _parse_mediaproperties(self, data):
@@ -159,34 +171,42 @@ class Parser(plugins.BaseParser):
             obj.set('stream_number', data.read_uint16(),
                     types.int, 'Stream number')
             
-            # Bitrate
             obj.set('max_bit_rate', data.read_uint32(),
                     types.int, 'Maximum bitrate')
+
             obj.set('avg_bit_rate', data.read_uint32(),
                     types.int, 'Average bitrate')
             
-            # Packet size
             obj.set('max_packet_size', data.read_uint32(),
                     types.int, 'Maximum packet size')
+            
             obj.set('avg_packet_size', data.read_uint32(),
                     types.int, 'Average packet size')
             
-            # Other
-            obj.set('start_time', data.read_uint32(), types.int, 'Start time')
-            obj.set('preroll', data.read_uint32(), types.int, 'Preroll')
-            obj.set('duration', data.read_uint32(), types.int, 'Duration')
+            obj.set('start_time', data.read_uint32(),
+                    types.int, 'Start time')
+            
+            obj.set('preroll', data.read_uint32(),
+                    types.int, 'Preroll')
+            
+            obj.set('duration', data.read_uint32(),
+                    types.int, 'Duration')
             
             # Stream name
             obj.set('stream_name_size',  data.read_uint8(),
                     types.int, 'Stream name length')
+            
             obj.set('stream_name',  data.read(obj.stream_name_size),
                     types.string, 'Stream name')
+            
             
             # Mime-type
             obj.set('mime_type_size',  data.read_uint8(),
                     types.int, 'MIME-type length')
+            
             obj.set('mime_type',  data.read(obj.mime_type_size),
                     types.string, 'MIME-type')
+            
             
             # Type specific data
             obj.set('type_specific_len',  data.read_uint32(),
@@ -216,22 +236,21 @@ class Parser(plugins.BaseParser):
         obj = plugins.Structure('RealVideoProperties')
         obj.set('version', data.read_uint16(), types.int, 'Version')
         obj.set('size', data.read_uint16(), types.int, 'Size')
-
         obj.set('type', data.read_fourcc(), types.string, 'Type')
         obj.set('codec', data.read_fourcc(), types.string, 'Codec')
         obj.set('width', data.read_uint16(), types.int, 'Width')
         obj.set('height', data.read_uint16(), types.int, 'Height')
-        
+
+        # Skip over 6 unknown bytes        
         data.seek(data.tell() + 6)
         
-        # Double check if this is correct for RV10/RV20 since all test files
-        # return 15.0
         obj.set('fps', data.read_qtfloat_32(),
                 types.float, 'Frames per second')
 
-        # I have no clue what the other bytes mean
+        # Ignore the other unknown bytes
         
         return obj
+        
         
     def _parse_type_realaudio(self, data):
 
@@ -245,25 +264,27 @@ class Parser(plugins.BaseParser):
             pass
             
         elif obj.version in [4, 5]:
-            
             obj.set('unused', data.read_uint16(), types.int, 'Size')
             obj.set('signature',  data.read(4), types.string, 'Signature')
             obj.set('unknown_1', data.read_uint32(), types.bytes, 'Unknown')
             obj.set('version_2', data.read_uint16(), types.int, 'Version 2')
             obj.set('header_size', data.read_uint32(),
                     types.int, 'Header size')
+            
             obj.set('codec_flavor', data.read_uint16(),
                     types.int, 'Codec flavor')
+            
             obj.set('codec_frame_size', data.read_uint32(),
                     types.int, 'Codec frame size')
+            
             obj.set('unknown_2', data.read(12), types.bytes, 'Unknown')
             obj.set('sub_packet', data.read_uint16(), types.int, 'Subpacket')
             obj.set('frame_size', data.read_uint16(), types.int, 'Frame size')
             obj.set('sub_packet_size', data.read_uint16(),
                     types.int, 'Subpacket size')
+            
             obj.set('unknown_3', data.read_uint16(), types.bytes, 'Unknown')
         
-            
             # Version 5 
             if obj.version == 5:
                 obj.set('unknown_4', data.read(6), types.bytes, 'Unknown')
@@ -271,38 +292,46 @@ class Parser(plugins.BaseParser):
             # Version 4 and 5
             obj.set('sample_rate', data.read_uint16(),
                     types.int, 'Sample rate')
-            obj.set('unknown_5', data.read_uint16(), types.bytes, 'Unknown')
+            
+            obj.set('unknown_5', data.read_uint16(),
+                    types.bytes, 'Unknown')
+            
             obj.set('sample_size', data.read_uint16(),
                     types.int, 'Sample size')
+            
             obj.set('num_channels', data.read_uint16(),
                     types.int, 'Number of channels')
             
-            # Version 4
             if obj.version == 4:
+                # Interleaver id
                 obj.set('interleaver_id_length', data.read_uint8(),
                         types.int, 'Interleaver id length')
                 obj.set('interleaver_id', data.read(obj.interleaver_id_length),
                         types.string, 'Interleaver id')
+                
+                # FourCC string
                 obj.set('fourcc_string_length', data.read_uint8(),
                         types.int, 'FourCC string length')
+                
                 obj.set('fourcc_string', data.read(obj.fourcc_string_length),
                         types.string, 'FourCC string')
             
-            # Version 5
-            else:
-                obj.set('interleaver_id', data.read_dword(), types.string,
-                        'Interleaver id')
-                obj.set('fourcc_string', data.read_dword(), types.string,
-                        'FourCC string')
+            else: # Version 5
+                obj.set('interleaver_id', data.read_dword(),
+                        types.string, 'Interleaver id')
+                obj.set('fourcc_string', data.read_dword(),
+                        types.string, 'FourCC string')
 
+            # Version 4 and 5
             obj.set('unknown_6', data.read(3), types.bytes, 'Unknown')
             
             if obj.version == 5:
                 obj.set('unknown_7', data.read(1), types.bytes, 'Unknown')
             
             # Version 4 and 5
-            obj.set('codec_extradata_length', data.read_uint32(), types.int,
-                    'Codec extra data length')
+            obj.set('codec_extradata_length', data.read_uint32(),
+                    types.int, 'Codec extra data length')
+            
             obj.set('codec_extradata', data.read(obj.codec_extradata_length),
                     types.bytes, 'Codec extra data')
 
