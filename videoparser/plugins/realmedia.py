@@ -29,11 +29,9 @@
         - http://wiki.multimedia.cx/index.php?title=RealMedia
 """
 
-import struct
-
-
 import videoparser.plugins as plugins
 import videoparser.streams as streams
+import videoparser.types as types
 
 class Parser(plugins.BaseParser):
     _endianess = streams.endian.big
@@ -96,7 +94,7 @@ class Parser(plugins.BaseParser):
 
     def extract_information(self, data, video):
         for object in data:
-            if isinstance(object, self.MediaProperties):
+            if object and object.id == 'MediaProperties':
                 if object.mime_type == 'logical-fileinfo':
                     continue
                 
@@ -125,53 +123,87 @@ class Parser(plugins.BaseParser):
 
     def _parse_fileproperties(self, data):
         """ Parse the File properties header (PROP) """
-        obj = self.FileProperties()
 
-        obj.version = data.read_uint16()
-        
+        obj = plugins.Structure('FileProperties')
+        obj.set('version', data.read_uint16(), types.int, 'Version')
+
         if obj.version == 0:
-            obj.max_bit_rate = data.read_uint32()
-            obj.avg_bit_rate = data.read_uint32()
-            obj.max_packet_size = data.read_uint32()
-            obj.avg_packet_size = data.read_uint32()
-            obj.num_packets = data.read_uint32()
-            obj.duration = data.read_uint32()
-            obj.preroll = data.read_uint32()
-            obj.index_offset = data.read_uint32()
-            obj.data_offset = data.read_uint32()
-            obj.num_streams = data.read_uint16()
-            obj.flags = data.read_uint16()
+            obj.set('max_bit_rate', data.read_uint32(),
+                    types.int, 'Maximum bitrate')
+            obj.set('avg_bit_rate', data.read_uint32(),
+                    types.int, 'Average bitrate')
+            obj.set('max_packet_size', data.read_uint32(),
+                    types.int, 'Maximum packet size')
+            obj.set('avg_packet_size', data.read_uint32(),
+                    types.int, 'Average packet size')
+            obj.set('num_packets', data.read_uint32(),
+                    types.int, 'Number of packets')
+            obj.set('duration', data.read_uint32(), types.int, 'Duration')
+            obj.set('preroll', data.read_uint32(), types.int, 'Preroll')
+            obj.set('index_offset', data.read_uint32(),
+                    types.int, 'Index offset')
+            obj.set('data_offset', data.read_uint32(),
+                    types.int, 'Data offset')
+            obj.set('num_streams', data.read_uint16(),
+                    types.int, 'Number of streams')
+            obj.set('flags', data.read_uint16(), types.int, 'Flags')
     
         return obj
     
     def _parse_mediaproperties(self, data):
         """ Parse the  Media properties header (MDPR)"""
-        obj = self.MediaProperties()
-        obj.version = data.read_uint16()
-
+        obj = plugins.Structure('MediaProperties')
+        obj.set('version', data.read_uint16(), types.int, 'Version')
+        
         if obj.version == 0:
-            obj.stream_number = data.read_uint16()
-            obj.max_bit_rate = data.read_uint32()
-            obj.avg_bit_rate = data.read_uint32()
-            obj.max_packet_size = data.read_uint32()
-            obj.avg_packet_size = data.read_uint32()
-            obj.start_time = data.read_uint32()
-            obj.preroll = data.read_uint32()
-            obj.duration = data.read_uint32()
-            obj.stream_name_size = data.read_uint8()
-            obj.stream_name = data.read(obj.stream_name_size)
-            obj.mime_type_size = data.read_uint8()
-            obj.mime_type = data.read(obj.mime_type_size)
-            obj.type_specific_len = data.read_uint32()
+            obj.set('stream_number', data.read_uint16(),
+                    types.int, 'Stream number')
             
+            # Bitrate
+            obj.set('max_bit_rate', data.read_uint32(),
+                    types.int, 'Maximum bitrate')
+            obj.set('avg_bit_rate', data.read_uint32(),
+                    types.int, 'Average bitrate')
+            
+            # Packet size
+            obj.set('max_packet_size', data.read_uint32(),
+                    types.int, 'Maximum packet size')
+            obj.set('avg_packet_size', data.read_uint32(),
+                    types.int, 'Average packet size')
+            
+            # Other
+            obj.set('start_time', data.read_uint32(), types.int, 'Start time')
+            obj.set('preroll', data.read_uint32(), types.int, 'Preroll')
+            obj.set('duration', data.read_uint32(), types.int, 'Duration')
+            
+            # Stream name
+            obj.set('stream_name_size',  data.read_uint8(),
+                    types.int, 'Stream name length')
+            obj.set('stream_name',  data.read(obj.stream_name_size),
+                    types.string, 'Stream name')
+            
+            # Mime-type
+            obj.set('mime_type_size',  data.read_uint8(),
+                    types.int, 'MIME-type length')
+            obj.set('mime_type',  data.read(obj.mime_type_size),
+                    types.string, 'MIME-type')
+            
+            # Type specific data
+            obj.set('type_specific_len',  data.read_uint32(),
+                    types.int, 'Type specific data length')
+
             type_data = data.read_subsegment(obj.type_specific_len)
-            
+
+            # Parse the type specific data based on the mime-type
             if obj.mime_type == 'video/x-pn-realvideo':
-                obj.type_specific_data = self._parse_type_realvideo(type_data)
+                type_specific_data = self._parse_type_realvideo(type_data)
             elif obj.mime_type == 'audio/x-pn-realaudio':
-                obj.type_specific_data = self._parse_type_realaudio(type_data)
+                type_specific_data = self._parse_type_realaudio(type_data)
             else:
-                obj.type_specific_data = type_data
+                type_specific_data = type_data
+
+            obj.set('type_specific_data', type_specific_data,
+                    types.object, 'Type specific data')
             
         return obj
 
@@ -181,20 +213,22 @@ class Parser(plugins.BaseParser):
         # This is based on guessing, so it might not be 100% ok.
         # i still need to find the framerate (atleast i suppose it is included)
         
-        obj = self.RealVideoProperties()
-        obj.version = data.read_uint16()
-        obj.size = data.read_uint16()
-        obj.type = data.read_fourcc()
-        obj.codec = data.read_fourcc()
-        obj.width = data.read_uint16()
-        obj.height = data.read_uint16()
+        obj = plugins.Structure('RealVideoProperties')
+        obj.set('version', data.read_uint16(), types.int, 'Version')
+        obj.set('size', data.read_uint16(), types.int, 'Size')
+
+        obj.set('type', data.read_fourcc(), types.string, 'Type')
+        obj.set('codec', data.read_fourcc(), types.string, 'Codec')
+        obj.set('width', data.read_uint16(), types.int, 'Width')
+        obj.set('height', data.read_uint16(), types.int, 'Height')
         
         data.seek(data.tell() + 6)
         
         # Double check if this is correct for RV10/RV20 since all test files
         # return 15.0
-        obj.fps = data.read_qtfloat_32()
-        
+        obj.set('fps', data.read_qtfloat_32(),
+                types.float, 'Frames per second')
+
         # I have no clue what the other bytes mean
         
         return obj
@@ -203,53 +237,74 @@ class Parser(plugins.BaseParser):
 
         # Based on information at:
         # http://wiki.multimedia.cx/index.php?title=RealMedia
-        
-        obj = self.RealAudioProperties()
-        obj.type = data.read_dword()
-        obj.version = data.read_uint16()
+        obj = plugins.Structure('RealAudioProperties')
+        obj.set('type', data.read_fourcc(), types.string, 'Type')
+        obj.set('version', data.read_uint16(), types.int, 'Version')
         
         if obj.version == 3:
             pass
-        
+            
         elif obj.version in [4, 5]:
-            obj.unused = data.read_uint16()
-            obj.signature =  data.read(4)
-            obj.unknown_1 = data.read_uint32()
-            obj.version_2 = data.read_uint16()
-            obj.header_size = data.read_uint32()
-            obj.codec_flavor = data.read_uint16()
-            obj.codec_frame_size = data.read_uint32()
-            obj.unknown_2 = data.read(12)
-            obj.sub_packet = data.read_uint16()
-            obj.frame_size = data.read_uint16()
-            obj.sub_packet_size = data.read_uint16()
-            obj.unknown_3 = data.read_uint16()
+            
+            obj.set('unused', data.read_uint16(), types.int, 'Size')
+            obj.set('signature',  data.read(4), types.string, 'Signature')
+            obj.set('unknown_1', data.read_uint32(), types.bytes, 'Unknown')
+            obj.set('version_2', data.read_uint16(), types.int, 'Version 2')
+            obj.set('header_size', data.read_uint32(),
+                    types.int, 'Header size')
+            obj.set('codec_flavor', data.read_uint16(),
+                    types.int, 'Codec flavor')
+            obj.set('codec_frame_size', data.read_uint32(),
+                    types.int, 'Codec frame size')
+            obj.set('unknown_2', data.read(12), types.bytes, 'Unknown')
+            obj.set('sub_packet', data.read_uint16(), types.int, 'Subpacket')
+            obj.set('frame_size', data.read_uint16(), types.int, 'Frame size')
+            obj.set('sub_packet_size', data.read_uint16(),
+                    types.int, 'Subpacket size')
+            obj.set('unknown_3', data.read_uint16(), types.bytes, 'Unknown')
         
+            
+            # Version 5 
             if obj.version == 5:
-                obj.unknown_4 = data.read(6)
+                obj.set('unknown_4', data.read(6), types.bytes, 'Unknown')
             
-            obj.sample_rate = data.read_uint16()
-            obj.unknown_5 = data.read_uint16()
-            obj.sample_size = data.read_uint16()
-            obj.num_channels = data.read_uint16()
+            # Version 4 and 5
+            obj.set('sample_rate', data.read_uint16(),
+                    types.int, 'Sample rate')
+            obj.set('unknown_5', data.read_uint16(), types.bytes, 'Unknown')
+            obj.set('sample_size', data.read_uint16(),
+                    types.int, 'Sample size')
+            obj.set('num_channels', data.read_uint16(),
+                    types.int, 'Number of channels')
             
+            # Version 4
             if obj.version == 4:
-                obj.interleaver_id_length = data.read_uint8()
-                obj.interleaver_id = data.read(obj.interleaver_id_length)
-                obj.fourcc_string_length = data.read_uint8()
-                obj.fourcc_string = data.read(obj.fourcc_string_length)
-                
-            elif obj.version == 5:
-                obj.interleaver_id = data.read_dword()
-                obj.fourcc_string = data.read_dword()
+                obj.set('interleaver_id_length', data.read_uint8(),
+                        types.int, 'Interleaver id length')
+                obj.set('interleaver_id', data.read(obj.interleaver_id_length),
+                        types.string, 'Interleaver id')
+                obj.set('fourcc_string_length', data.read_uint8(),
+                        types.int, 'FourCC string length')
+                obj.set('fourcc_string', data.read(obj.fourcc_string_length),
+                        types.string, 'FourCC string')
+            
+            # Version 5
+            else:
+                obj.set('interleaver_id', data.read_dword(), types.string,
+                        'Interleaver id')
+                obj.set('fourcc_string', data.read_dword(), types.string,
+                        'FourCC string')
 
-            obj.unknown_6 = data.read(3)
+            obj.set('unknown_6', data.read(3), types.bytes, 'Unknown')
             
             if obj.version == 5:
-                obj.unknown_7 = data.read(1)
+                obj.set('unknown_7', data.read(1), types.bytes, 'Unknown')
             
-            obj.codec_extradata_length = data.read_uint32()
-            obj.codec_extradata = data.read(obj.codec_extradata_length)
+            # Version 4 and 5
+            obj.set('codec_extradata_length', data.read_uint32(), types.int,
+                    'Codec extra data length')
+            obj.set('codec_extradata', data.read(obj.codec_extradata_length),
+                    types.bytes, 'Codec extra data')
 
         return obj
 
@@ -259,134 +314,5 @@ class Parser(plugins.BaseParser):
         return None
 
 
-
-    class Structure(object):
-        def repr_childs(self, obj):
-            buffer = ""
-            for entry in obj:
-                buffer += "\n".join(["   %s" % line for line
-                                     in repr(entry).split('\n')])
-                buffer += "\n"
-            return buffer
-
-    
-    class FileProperties(object):
-        def __repr__(self):
-            buffer  = "FileProperties structure:\n"
-            buffer += " %-30s: %s\n" % ('Version', self.version)
-            buffer += " %-30s: %s\n" % ('Max Bitrate', self.max_bit_rate)
-            buffer += " %-30s: %s\n" % ('Avg Bitrate', self.avg_bit_rate)
-            buffer += " %-30s: %s\n" % ('Max packet size', self.max_packet_size)
-            buffer += " %-30s: %s\n" % ('Avg packet size', self.avg_packet_size)
-            buffer += " %-30s: %s\n" % ('Num packets', self.num_packets)
-            buffer += " %-30s: %s\n" % ('Duration', self.duration)
-            buffer += " %-30s: %s\n" % ('Preroll', self.preroll)
-            buffer += " %-30s: %s\n" % ('Index offset', self.index_offset)
-            buffer += " %-30s: %s\n" % ('Data offset', self.data_offset)
-            buffer += " %-30s: %s\n" % ('Num streams', self.num_streams)
-            buffer += " %-30s: %s\n" % ('Flags', self.flags)
-            
-            return buffer
-        
-        
-    class MediaProperties(Structure):
-        def __repr__(self):
-            buffer  = "MediaProperties structure:\n"
-            buffer += " %-30s: %s\n" % ('Version', self.version)
-            buffer += " %-30s: %s\n" % ('Stream number', self.stream_number)
-            buffer += " %-30s: %s\n" % ('Max Bitrate', self.max_bit_rate)
-            buffer += " %-30s: %s\n" % ('Avg Bitrate', self.avg_bit_rate)
-            buffer += " %-30s: %s\n" % ('Max packet size',
-                                        self.max_packet_size)
-            buffer += " %-30s: %s\n" % ('Avg packet size',
-                                        self.avg_packet_size)
-            buffer += " %-30s: %s\n" % ('Start time', self.start_time)
-            buffer += " %-30s: %s\n" % ('Preroll', self.preroll)
-            buffer += " %-30s: %s\n" % ('Duration', self.duration)
-            buffer += " %-30s: %s\n" % ('Stream name length',
-                                        self.stream_name_size)
-            buffer += " %-30s: %s\n" % ('Stream name', self.stream_name)
-            buffer += " %-30s: %s\n" % ('Mime type length',
-                                        self.mime_type_size)
-            buffer += " %-30s: %s\n" % ('Mime type', self.mime_type)
-            buffer += " %-30s: %s\n" % ('Type specific data length',
-                                        self.type_specific_len)
-            buffer += " %-30s:\n %s" % ('Type specific data',
-                                        self.repr_childs([self.type_specific_data]))
-        
-            return buffer
     
     
-    class RealVideoProperties(Structure):
-        def __repr__(self):
-            buffer  = "RealVideoProperties structure:\n"
-            buffer += " %-30s: %s\n" % ('Version (?)',self.version)
-            buffer += " %-30s: %s\n" % ('Size',self.size)
-            buffer += " %-30s: %s\n" % ('Type',self.type)
-            buffer += " %-30s: %s\n" % ('Codec',self.codec)
-            buffer += " %-30s: %s\n" % ('Width',self.width)
-            buffer += " %-30s: %s\n" % ('Height',self.height)
-            buffer += " %-30s: %s\n" % ('Frames per second',self.fps)
-    
-            return buffer
-        
-    class RealAudioProperties(Structure):
-        def __repr__(self):
-            buffer  = "RealAudioProperties structure:\n"
-            buffer += " %-30s: %s\n" % ('Type', self.type)
-            buffer += " %-30s: %s\n" % ('Version', self.version)
-            
-            if self.version == 3:
-                pass
-            
-            elif self.version in [4, 5]:
-                buffer += " %-30s: %s\n" % ('Unused', self.unused)
-                buffer += " %-30s: %s\n" % ('Signature', self.signature)
-                buffer += " %-30s: %r\n" % ('Unknown', self.unknown_1)
-                buffer += " %-30s: %s\n" % ('Version 2', self.version_2)
-                buffer += " %-30s: %s\n" % ('Header size', self.header_size)
-                buffer += " %-30s: %s\n" % ('Codec flavor', self.codec_flavor)
-                buffer += " %-30s: %s\n" % ('Codec frame size',
-                                            self.codec_frame_size)
-                buffer += " %-30s: %r\n" % ('Unknown', self.unknown_2)
-                buffer += " %-30s: %s\n" % ('Sub-packet', self.sub_packet)
-                buffer += " %-30s: %s\n" % ('Frame size', self.frame_size)
-                buffer += " %-30s: %s\n" % ('Sub-packet size',
-                                            self.sub_packet_size)
-                buffer += " %-30s: %r\n" % ('Unknown', self.unknown_3)
-            
-                if self.version == 5:
-                    buffer += " %-30s: %r\n" % ('Unknown', self.unknown_4)
-                
-                buffer += " %-30s: %s\n" % ('Sample rate', self.sample_rate)
-                buffer += " %-30s: %r\n" % ('Unknown', self.unknown_5)
-                buffer += " %-30s: %s\n" % ('Sample size', self.sample_size)
-                buffer += " %-30s: %s\n" % ('Channels', self.num_channels)
-                
-                if self.version == 4:
-                    buffer += " %-30s: %s\n" % ('Interleaver id length',
-                                                self.interleaver_id_length)
-                    buffer += " %-30s: %s\n" % ('Interleaver id',
-                                                self.interleaver_id)
-                    buffer += " %-30s: %s\n" % ('FourCC string length',
-                                                self.fourcc_string_length)
-                    buffer += " %-30s: %s\n" % ('FourCC string',
-                                                self.fourcc_string)
-                    
-                elif self.version == 5:
-                    buffer += " %-30s: %s\n" % ('Interleaver id', self.interleaver_id)
-                    buffer += " %-30s: %s\n" % ('FourCC string', self.fourcc_string)
-    
-                buffer += " %-30s: %r\n" % ('Unknown', self.unknown_6)
-                
-                if self.version == 5:
-                    buffer += " %-30s: %r\n" % ('Unknown', self.unknown_7)
-                
-                buffer += " %-30s: %s\n" % ('Codec extra data length',
-                                            self.codec_extradata_length)
-                buffer += " %-30s: %r\n" % ('Codec extra data',
-                                            self.codec_extradata)
-    
-            return buffer
-
-
